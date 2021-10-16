@@ -7,13 +7,10 @@ Link to GDocs: [click here](https://docs.google.com/document/d/1WRbPxzXUcYOtLToE
 
 Item                                    | DDL
 ---                                     | ---
-ER into a relational schema             | 23 Oct
-Populate Data                           | 23 Oct
-Implement procedures & triggers         | 30 Oct
-Testing & Report                        | 3 Nov
-**INTERNAL DEADLINE**                   | 3 Nov
-Submission of Project Report and Code   | 6 Nov
-Project Evaluation                      | 13 Nov
-
-
-## 
+ER into a relational schema             | Sat, 23 Oct
+Populate Data                           | Sat, 23 Oct
+Implement procedures & triggers         | Sat, 30 Oct
+Testing & Report                        | Wed, 3 Nov
+**INTERNAL DEADLINE**                   | **Wed, 3 Nov**
+Submission of Project Report and Code   | Sat, 6 Nov
+Project Evaluation                      | Sat, 13 Nov
