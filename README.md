@@ -14,3 +14,19 @@ Testing & Report                        | Wed, 3 Nov
 **INTERNAL DEADLINE**                   | **Wed, 3 Nov**
 Submission of Project Report and Code   | Sat, 6 Nov
 Project Evaluation                      | Sat, 13 Nov
+
+## Project Plan
+
+### Schema
+
+Assignee                                                            | Table Name            | Dependencies                  | Remarks
+---                                                                 | ---                   | ---                           | ---
+![](https://via.placeholder.com/10/FCE5CD/000000?text=+) Teddy      | HealthDeclarations    | Declare                       | 
+![](https://via.placeholder.com/10/FCE5CD/000000?text=+) Teddy      | Employees             | Departments                   | 
+![](https://via.placeholder.com/10/FCE5CD/000000?text=+) Teddy      | Juniors               | Employees                     | 
+![](https://via.placeholder.com/10/C9DAF7/000000?text=+) Simon      | Bookers               | Employees                     | 
+![](https://via.placeholder.com/10/C9DAF7/000000?text=+) Simon      | Seniors               | Bookers                       | 
+![](https://via.placeholder.com/10/C9DAF7/000000?text=+) Simon      | Managers              | Bookers                       | 
+![](https://via.placeholder.com/10/FFF2CC/000000?text=+) Petrick    | Sessions              | Bookers, Meeting Rooms        | 
+![](https://via.placeholder.com/10/FFF2CC/000000?text=+) Tianle     | Departments           |                               | 
+![](https://via.placeholder.com/10/FFF2CC/000000?text=+) Tianle     | Meeting Rooms         | Departments                   | 
