@@ -2,7 +2,6 @@
 
 Useful links:
 - [Group GDocs](https://docs.google.com/document/d/1WRbPxzXUcYOtLToE98nsChCFKzNkyK7youcX-L81GHw/edit?usp=sharing)
-- []
 
 Item                                    | DDL
 ---                                     | ---
