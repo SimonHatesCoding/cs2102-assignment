@@ -63,16 +63,19 @@ CREATE TABLE Juniors (
 
 CREATE TABLE Bookers (
     -- Simon
+    eid INT REFERENCES Employees(eid)
 );
 
 
 CREATE TABLE Seniors (
     -- Simon
+    eid INT REFERENCES Booker(eid)
 );
 
 
 CREATE TABLE Managers (
     -- Simon
+    eid INT REFERENCES Booker(eid)
 );
 
 
@@ -108,6 +111,11 @@ CREATE TABLE WorksIn (
 
 CREATE TABLE Updates (
     -- Simon
+    eid INT REFERENCES Managers(eid),
+    `date` DATE,
+    floor INT,
+    room INT,
+    FOREIGN KEY (floor, room) REFERENCES MeetingRooms(floor, room)
 );
 
 
