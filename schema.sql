@@ -37,7 +37,7 @@ Joins,
 LocatedIn,
 Updates,
 Approves,
-WorksIn,
+WorksIn
 
 CASCADE;
 
@@ -46,15 +46,11 @@ CASCADE;
 -- ENTITIES (Add trigger functions and triggers as you deem fit.)
 ------------------------------------------------------------------------
 
-CREATE TABLE HealthDeclarations (
-    -- Teddy 
-    eid     INT,
-    temp    float   NOT NULL,
-    `date`  DATE,
-    PRIMARY KEY (`date`, eid)
-    FOREIGN KEY eid REFERENCES Employees(eid)
-);
-
+CREATE TABLE Departments (
+    -- Tianle
+    did INT PRIMARY KEY,
+    dname VARCHAR(50) NOT NULL
+); --before Employees since latter need fk
 
 CREATE TABLE Employees (
     -- Teddy
@@ -63,50 +59,52 @@ CREATE TABLE Employees (
     email           VARCHAR(50),
     resigned_date   DATE,
     did             INT,
-    FOREIGN KEY did REFERENCES Departments(did)
+    FOREIGN KEY (did) REFERENCES Departments(did)
+);
+
+CREATE TABLE HealthDeclarations (
+    -- Teddy 
+    eid     INT,
+    temp    float   NOT NULL,
+    date  DATE,
+    PRIMARY KEY (date, eid),
+    FOREIGN KEY (eid) REFERENCES Employees(eid)
 );
 
 CREATE TABLE Contacts (
     contact_number  VARCHAR(50),
     eid             INT,
-    PRIMARY KEY (eid, contact_number)
-    FOREIGN KEY eid REFERENCES Employees(eid)
-)
+    PRIMARY KEY (eid, contact_number),
+    FOREIGN KEY (eid) REFERENCES Employees(eid)
+);
 
 CREATE TABLE Juniors (
     -- Teddy
     eid     INT     PRIMARY KEY,
-    FOREIGN KEY eid REFERENCES Employees(eid)
+    FOREIGN KEY (eid) REFERENCES Employees(eid)
 );
 
 
 CREATE TABLE Bookers (
     -- Simon
-    eid     INT     REFERENCES Employees(eid)
+    eid     INT     PRIMARY KEY REFERENCES Employees(eid)
 );
 
 
 CREATE TABLE Seniors (
     -- Simon
-    eid     INT     REFERENCES Booker(eid)
+    eid     INT     PRIMARY KEY REFERENCES Bookers(eid)
 );
 
 
 CREATE TABLE Managers (
     -- Simon
-    eid     INT     REFERENCES Booker(eid)
+    eid     INT     PRIMARY KEY REFERENCES Bookers(eid)
 );
 
 
 CREATE TABLE Sessions (
     -- Petrick
-);
-
-
-CREATE TABLE Departments (
-    -- Tianle
-    did     INT     PRIMARY KEY
-    dname   VARCHAR(50)
 );
 
 
