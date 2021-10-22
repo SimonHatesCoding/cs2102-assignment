@@ -21,23 +21,24 @@
 DROP TABLE IF EXISTS
 
 -- ENTITIES (Insert/Delete table names here)
-HealthDeclarations,
+Departments,
 Employees,
+HealthDeclarations,
+Contacts,
 Juniors,
 Bookers,
 Seniors,
 Managers,
-Sessions,
-Departments,
+`Sessions`,
 MeetingRooms,
 
 -- RELATIONS (Insert/Delete table names here)
-Books,
 Joins,
-LocatedIn,
 Updates,
-Approves,
-WorksIn
+-- LocatedIn,   (merged with MeetingRooms)
+-- Books,       (merged with Sessions)
+-- Approves,    (merged with Sessions)
+-- WorksIn      (merged with Employees)
 
 CASCADE;
 
@@ -103,8 +104,18 @@ CREATE TABLE Managers (
 );
 
 
-CREATE TABLE Sessions (
+CREATE TABLE `Sessions` (
     -- Petrick
+    approver_id     INT,
+    `time`          TIME,
+    `date`          DATE,
+    room            INT,
+    `floor`         INT,
+    booker_id       INT     NOT NULL,
+    PRIMARY KEY (approver_id, `time`, `date`, room, `floor`),
+    FOREIGN KEY approver_id REFERENCES Managers(eid),
+    FOREIGN KEY booker_id REFERENCES Bookers(eid),
+    FOREIGN KEY (room, `floor`) REFERENCES MeetingRooms(room, `floor`) ON DELETE CASCADE
 );
 
 
@@ -142,23 +153,5 @@ CREATE TABLE Updates (
     floor   INT,
     room    INT,
     FOREIGN KEY (floor, room) REFERENCES MeetingRooms(floor, room)
-);
-
-
-CREATE TABLE Books (
-    -- Petrick
-    -- REMARK: Merge into Sessions?
-);
-
-
-CREATE TABLE Approves (
-    -- Petrick
-    -- REMARK: Merge into Sessions?
-);
-
-
-CREATE TABLE LocatedIn (
-    -- Tianle
-    -- REMARK: Merge into MeetingRooms?
 );
 
