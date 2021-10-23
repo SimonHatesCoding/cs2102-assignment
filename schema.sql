@@ -29,7 +29,7 @@ Juniors,
 Bookers,
 Seniors,
 Managers,
-`Sessions`,
+"Sessions",
 MeetingRooms,
 
 -- RELATIONS (Insert/Delete table names here)
@@ -104,18 +104,18 @@ CREATE TABLE Managers (
 );
 
 
-CREATE TABLE `Sessions` (
+CREATE TABLE "Sessions" (
     -- Petrick
     approver_id     INT,
-    `time`          TIME,
-    `date`          DATE,
+    "time"          TIME,
+    "date"          DATE,
     room            INT,
-    `floor`         INT,
+    "floor"         INT,
     booker_id       INT     NOT NULL,
-    PRIMARY KEY (approver_id, `time`, `date`, room, `floor`),
+    PRIMARY KEY (approver_id, "time", "date", room, "floor"),
     FOREIGN KEY approver_id REFERENCES Managers(eid),
     FOREIGN KEY booker_id REFERENCES Bookers(eid),
-    FOREIGN KEY (room, `floor`) REFERENCES MeetingRooms(room, `floor`) ON DELETE CASCADE
+    FOREIGN KEY (room, "floor") REFERENCES MeetingRooms(room, "floor") ON DELETE CASCADE
 );
 
 
@@ -136,20 +136,20 @@ CREATE TABLE MeetingRooms (
 CREATE TABLE Joins (
     -- Teddy 
     eid     INT
-    `time`  TIME
-    `date`  DATE
+    "time"  TIME
+    "date"  DATE
     room    INT
-    `floor` INT
-    PRIMARY KEY (eid, `time`, `date`, room, `floor`)
+    "floor" INT
+    PRIMARY KEY (eid, "time", "date", room, "floor")
     FOREIGN KEY eid REFERENCES Employees(eid)
-    FOREIGN KEY (room, `floor`) REFERENCES MeetingRooms(room, `floor`)
+    FOREIGN KEY (room, "floor") REFERENCES MeetingRooms(room, "floor")
 );
 
 
 CREATE TABLE Updates (
     -- Simon
     eid     INT     REFERENCES Managers(eid),
-    `date`  DATE,
+    "date"  DATE,
     floor   INT,
     room    INT,
     FOREIGN KEY (floor, room) REFERENCES MeetingRooms(floor, room)
