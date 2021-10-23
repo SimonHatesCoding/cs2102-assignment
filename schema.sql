@@ -120,12 +120,12 @@ CREATE TABLE "Sessions" (
 
 
 CREATE TABLE MeetingRooms (
-    -- Tianle
-    room    INT     PRIMARY KEY
-    floor   INT     PRIMARY KEY
-    rname   VARCHAR(50)
-    did     INT,
-    FOREIGN KEY did REFERENCES Departments(did)
+    room        INT,
+    "floor"     INT,
+    rname       VARCHAR(50),
+    did         INT,
+    PRIMARY KEY(room, "floor"),
+    FOREIGN KEY (did) REFERENCES Departments(did)
 );
 
 
