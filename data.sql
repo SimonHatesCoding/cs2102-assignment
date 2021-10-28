@@ -882,10 +882,6 @@ INSERT INTO Managers
 --     FROM Managers
 -- ); --Expect 0
 
-INSERT INTO Sessions VALUES
-    -- Petrick
-;
-
 
 INSERT INTO Departments VALUES
     -- Tianle
@@ -925,6 +921,26 @@ INSERT INTO Departments VALUES
     insert into MeetingRooms (room, "floor", rname, did) values (05, 05, 'Slytherin Meeting Room', 5);
 
 
+--Sessions
+--(see notes.txt for list of booker_ids and aprover_ids)
+    -- Petrick
+    insert into "Sessions" ("time", "date", room, "floor", booker_id, approver_id) values ('11:00', '2021-10-19', 01, 01, 4, 8);
+    insert into "Sessions" ("time", "date", room, "floor", booker_id, approver_id) values ('13:00', '2021-10-19', 02, 02, 7, 108);
+    insert into "Sessions" ("time", "date", room, "floor", booker_id, approver_id) values ('14:00', '2021-10-20', 03, 03, 55, 6);
+    insert into "Sessions" ("time", "date", room, "floor", booker_id, approver_id) values ('16:00', '2021-10-20', 04, 04, 2, 59);
+
+    -- 57 approves their own booking
+    insert into "Sessions" ("time", "date", room, "floor", booker_id, approver_id) values ('09:00', '2021-10-20', 05, 05, 57, 57);
+
+    insert into "Sessions" ("time", "date", room, "floor", booker_id, approver_id) values ('12:00', '2021-10-19', 01, 01, 153, null);
+    insert into "Sessions" ("time", "date", room, "floor", booker_id, approver_id) values ('11:00', '2021-10-21', 04, 04, 109, null);
+    insert into "Sessions" ("time", "date", room, "floor", booker_id, approver_id) values ('15:00', '2021-10-21', 04, 04, 109, null);
+    
+    -- 101 books (02, 02) from 13:00-15:00
+    insert into "Sessions" ("time", "date", room, "floor", booker_id, approver_id) values ('13:00', '2021-10-20', 02, 02, 101, null);
+    insert into "Sessions" ("time", "date", room, "floor", booker_id, approver_id) values ('14:00', '2021-10-20', 02, 02, 101, null);
+    
+
 ------------------------------------------------------------------------
 -- RELATIONSHIPS (Modify and merge relations, add triggers as needed.)
 ------------------------------------------------------------------------
@@ -942,18 +958,6 @@ INSERT INTO WorksIn VALUES
 
 INSERT INTO Updates VALUES
     -- Simon
-;
-
-
-INSERT INTO Books VALUES
-    -- Petrick
-    -- REMARK: Merge into Sessions?
-;
-
-
-INSERT INTO Approves VALUES
-    -- Petrick
-    -- REMARK: Merge into Sessions?
 ;
 
 
