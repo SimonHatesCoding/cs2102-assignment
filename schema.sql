@@ -103,6 +103,14 @@ CREATE TABLE Managers (
     eid     INT     PRIMARY KEY REFERENCES Bookers(eid)
 );
 
+CREATE TABLE MeetingRooms (
+    room        INT,
+    "floor"     INT,
+    rname       VARCHAR(50),
+    did         INT,
+    PRIMARY KEY (room, "floor"),
+    FOREIGN KEY (did) REFERENCES Departments(did)
+);
 
 CREATE TABLE "Sessions" (
     -- Petrick
@@ -113,21 +121,10 @@ CREATE TABLE "Sessions" (
     booker_id       INT     NOT NULL,
     approver_id     INT,
     PRIMARY KEY ("time", "date", room, "floor", approver_id),
-    FOREIGN KEY approver_id REFERENCES Managers(eid),
-    FOREIGN KEY booker_id REFERENCES Bookers(eid),
+    FOREIGN KEY (approver_id) REFERENCES Managers(eid),
+    FOREIGN KEY (booker_id) REFERENCES Bookers(eid),
     FOREIGN KEY (room, "floor") REFERENCES MeetingRooms(room, "floor") ON DELETE CASCADE
 );
-
-
-CREATE TABLE MeetingRooms (
-    room        INT,
-    "floor"     INT,
-    rname       VARCHAR(50),
-    did         INT,
-    PRIMARY KEY(room, "floor"),
-    FOREIGN KEY (did) REFERENCES Departments(did)
-);
-
 
 ------------------------------------------------------------------------
 -- RELATIONSHIPS (Modify and merge relations, add triggers as needed.)
@@ -135,13 +132,13 @@ CREATE TABLE MeetingRooms (
 
 CREATE TABLE Joins (
     -- Teddy 
-    eid     INT
-    "time"  TIME
-    "date"  DATE
-    room    INT
-    "floor" INT
-    PRIMARY KEY (eid, "time", "date", room, "floor")
-    FOREIGN KEY eid REFERENCES Employees(eid)
+    eid     INT,
+    "time"  TIME,
+    "date"  DATE,
+    room    INT,
+    "floor" INT,
+    PRIMARY KEY (eid, "time", "date", room, "floor"),
+    FOREIGN KEY (eid) REFERENCES Employees(eid),
     FOREIGN KEY (room, "floor") REFERENCES MeetingRooms(room, "floor")
 );
 
@@ -150,8 +147,8 @@ CREATE TABLE Updates (
     -- Simon
     eid     INT     REFERENCES Managers(eid),
     "date"  DATE,
-    floor   INT,
+    "floor"   INT,
     room    INT,
-    FOREIGN KEY (floor, room) REFERENCES MeetingRooms(floor, room)
+    FOREIGN KEY ("floor", room) REFERENCES MeetingRooms("floor", room)
 );
 
