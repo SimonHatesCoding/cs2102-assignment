@@ -81,10 +81,23 @@ $$ LANGUAGE sql;
 
 
 CREATE OR REPLACE PROCEDURE add_employee
- (<param> <type>, <param> <type>, ...)
+ (IN ename VARCHAR(50), IN contact VARCHAR(50), IN kind VARCHAR(10) IN did INT)
 AS $$
-    -- Teddy
-$$ LANGUAGE sql;
+ -- Teddy
+DECLARE
+    email VARCHAR(50) := "";
+    eid INT := 0;
+BEGIN
+    SELECT MAX(eid) + 1 INTO eid FROM Employees;
+    SELECT concat(ename, eid, '@hotmail.com') INTO email;
+    INSERT INTO Employees (eid, ename, email, did) VALUES (eid, ename, email, did);
+    INSERT INTO Contacts VALUES (eid, contact);
+    IF kind = 'junior' THEN INSERT INTO Juniors VALUES eid;
+    ELSIF kind = 'senior' THEN INSERT INTO Seniors VALUES eid;
+    ELSIF kind = 'manager' THEN INSERT INTO Managers VALUES eid;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE remove_employee
