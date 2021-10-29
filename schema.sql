@@ -114,13 +114,13 @@ CREATE TABLE MeetingRooms (
 
 CREATE TABLE "Sessions" (
     -- Petrick
-    approver_id     INT,
     "time"          TIME,
     "date"          DATE,
     room            INT,
     "floor"         INT,
     booker_id       INT     NOT NULL,
-    PRIMARY KEY (approver_id, "time", "date", room, "floor"),
+    approver_id     INT,
+    PRIMARY KEY ("time", "date", room, "floor", approver_id),
     FOREIGN KEY (approver_id) REFERENCES Managers(eid),
     FOREIGN KEY (booker_id) REFERENCES Bookers(eid),
     FOREIGN KEY (room, "floor") REFERENCES MeetingRooms(room, "floor") ON DELETE CASCADE
