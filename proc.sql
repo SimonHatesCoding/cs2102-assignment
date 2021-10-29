@@ -204,29 +204,35 @@ $$ LANGUAGE sql;
 
 CALL declare_health(1, '2021-10-19', 37.0);
 
-
-CREATE OR REPLACE FUNCTION book_room
- (<param> <type>, <param> <type>, ...)
-RETURNS <type> AS $$
-DECLARE
-    -- variables here
-BEGIN
-    -- Teddy
-END
-$$ LANGUAGE plpgsql;
-
-
 CREATE OR REPLACE FUNCTION check_fever()
 RETURNS TRIGGER AS $$
 BEGIN
--- TraceTogether
+    -- no fever
+    IF NEW.temperature <= 37.5 THEN RETURN NULL;
+    END IF;
 
+    -- if the employee is the booker -> cancel future sessions
+    IF NEW.eid IN (SELECT * FROM Bookers) THEN
+        DELETE FROM "Sessions" WHERE booker_id = NEW.eid AND "date" >= NEW.date;
+    END IF;
+
+    -- remove employee from future sessions
+    DELETE FROM Joins WHERE eid = NEW.eid AND "date" >= NEW.date;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER TR_HealthDeclarations_AfterInsert
-AFTER INSERT ON HealthDeclarations
+AFTER INSERT OR UPDATE ON HealthDeclarations
 FOR EACH ROW EXECUTE FUNCTION check_fever();
+
+
+CREATE OR REPLACE FUNCTION contact_tracing
+(IN eid INT)
+AS $$
+
+
+$$ LANGUAGE plpgsql;
+
 ------------------------------------------------------------------------
 -- ADMIN (Readapt as necessary.)
 ------------------------------------------------------------------------
