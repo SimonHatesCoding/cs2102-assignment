@@ -893,7 +893,12 @@ INSERT INTO Departments VALUES
     (2, 'Finance'),
     (3, 'Operations Management'),
     (4, 'Human Resource'),
-    (5, 'IT')
+    (5, 'IT');
+    (6, 'Safety');
+    (7, 'Cleanliness');
+    (8, 'Logistics');
+    (9, 'Legal');
+    (10, 'Research & Development')
 ;
 
 --MeetingRooms
