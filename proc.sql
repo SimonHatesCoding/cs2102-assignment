@@ -147,7 +147,7 @@ $$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION search_room
  ()
-RETURNS  AS $$
+RETURNS AS $$
 DECLARE
     -- variables here
 BEGIN

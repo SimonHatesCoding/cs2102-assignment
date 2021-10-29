@@ -70,3 +70,53 @@ $$ LANGUAGE sql;
 
 SELECT * FROM non_compliance('2021-09-10'::DATE, '2021-09-20'::DATE);
 SELECT * FROM non_compliance('2021-09-10', '2021-09-20');
+
+
+CREATE OR REPLACE PROCEDURE add_department (IN did INT, IN dname VARCHAR(50)) 
+AS $$
+    INSERT INTO Departments (did, dname) VALUES (did, dname);
+$$ LANGUAGE sql;
+
+CALL add_department(6, 'Safety');
+
+
+CREATE OR REPLACE PROCEDURE remove_department(IN did INT)
+ -- CANNOT DELETE 1,2,4,5,9; Operations will be transffered into HR; R&D is transffered into IT. 
+ -- The rest of departments cannot be deleted. Raise exception if attempts are made.
+AS $$
+    DELETE FROM Departments D WHERE D.did = did;
+    IF did IN (6,7,8) THEN
+        DELETE FROM Employees E WHERE did = E.did;
+    ELSIF did = 3 THEN
+        UPDATE Employees E SET E.did = 4 WHERE E.did = 3;
+    ELSIF did = 10 THEN
+        UPDATE Employees E SET E.did = 5 WHERE E.did = 10;
+    END IF;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION core_departments() RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Some users are trying to delete or update the core departments';
+    RETURN NULL;
+END;
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE TRIGGER check_core
+BEFORE DELETE OR UPDATE ON Departments
+FOR EACH ROW WHERE OLD.did IN (1,2,4,5,9) EXECUTE FUNCTION core_departments();
+
+
+CREATE OR REPLACE PROCEDURE add_room
+ (IN room INT, IN "floor" INT, IN rname VARCHAR(50), IN did INT)
+RETURN void AS $$
+    -- Tianle
+    INSERT INTO MeetingRooms VALUES (room, "floor", rname, did);
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE PROCEDURE change_capacity
+(IN room INT, IN "floor" INT, IN capacity INT, IN DATE )
+AS $$
+    UPDATE Updates SET cap = capacity wHERE room = OLD.room AND "floor" = OLD.floor;
+    UPDATE Updates SET "date" = OLD."date" wHERE room = OLD.room AND "floor" = OLD.floor;
+    -- Tianle
+$$ LANGUAGE sql;
