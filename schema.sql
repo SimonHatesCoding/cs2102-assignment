@@ -29,7 +29,7 @@ Juniors,
 Bookers,
 Seniors,
 Managers,
-"Sessions",
+Sessions,
 MeetingRooms,
 
 -- RELATIONS (Insert/Delete table names here)
@@ -108,7 +108,7 @@ CREATE TABLE MeetingRooms (
     FOREIGN KEY (did) REFERENCES Departments(did)
 );
 
-CREATE TABLE "Sessions" (
+CREATE TABLE Sessions (
     -- Petrick
     "time"          TIME,
     "date"          DATE,
@@ -116,7 +116,7 @@ CREATE TABLE "Sessions" (
     "floor"         INT,
     booker_id       INT     NOT NULL,
     approver_id     INT,
-    PRIMARY KEY ("time", "date", room, "floor", approver_id),
+    PRIMARY KEY ("time", "date", room, "floor", booker_id),
     FOREIGN KEY (booker_id) REFERENCES Bookers(eid),
     FOREIGN KEY (room, "floor") REFERENCES MeetingRooms(room, "floor") ON DELETE CASCADE
 );
