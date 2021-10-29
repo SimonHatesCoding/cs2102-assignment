@@ -157,13 +157,11 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION join_meeting
- (<param> <type>, <param> <type>, ...)
+ (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN eid INT)
 RETURNS <type> AS $$
-DECLARE
-    -- variables here
-BEGIN
-    -- Teddy
-END
+-- cannot join approved meeting
+-- cannot join if got fever
+
 $$ LANGUAGE plpgsql;
 
 
@@ -218,6 +216,8 @@ BEGIN
 
     -- remove employee from future sessions
     DELETE FROM Joins WHERE eid = NEW.eid AND "date" >= NEW.date;
+
+    -- call contact tracing
 END;
 $$ LANGUAGE plpgsql;
 
@@ -227,9 +227,20 @@ FOR EACH ROW EXECUTE FUNCTION check_fever();
 
 
 CREATE OR REPLACE FUNCTION contact_tracing
-(IN eid INT)
+(IN IN_eid INT, IN D DATE)
 AS $$
+DECLARE
+    temp INT;
+BEGIN
+    -- use the latest health declaration
+    SELECT temperature INTO temp
+    FROM HealthDeclarations
+    WHERE eid = eid
+    ORDER BY "date" DESC
+    LIMIT 1;
 
+    raise notice 'Value: %', temp;
+END;
 
 $$ LANGUAGE plpgsql;
 

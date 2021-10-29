@@ -68,5 +68,37 @@ RETURNS  SETOF RECORD  AS $$
     WHERE "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) > 0;
 $$ LANGUAGE sql;
 
-SELECT * FROM non_compliance('2021-09-10'::DATE, '2021-09-20'::DATE);
-SELECT * FROM non_compliance('2021-09-10', '2021-09-20');
+DROP FUNCTION contact_tracing;
+
+CREATE OR REPLACE FUNCTION contact_tracing
+(IN in_eid INT, IN D DATE)
+RETURNS void AS $$
+DECLARE
+    temp INT;
+BEGIN
+    -- use the latest health declaration
+    SELECT HD.temperature INTO temp
+    FROM HealthDeclarations HD
+    WHERE HD.eid = in_eid
+    ORDER BY "date" DESC
+    LIMIT 1;
+
+    IF temp IS NULL THEN 
+        raise notice 'Employee with % have never declared temperature' in_eid;
+        RETURN;
+    END IF
+
+    IF temp <= 37.5 THEN RETURN;
+    END IF;
+
+    -- find approved sessions in the past 3 days
+
+
+    -- get all the eid that join these sessions
+    -- remove these eid from sessions in the next 7 days
+
+END;
+
+$$ LANGUAGE plpgsql;
+
+SELECT contact_tracing(1);
