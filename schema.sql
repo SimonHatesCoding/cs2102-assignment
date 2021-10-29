@@ -143,6 +143,7 @@ CREATE TABLE Updates (
     "date"  DATE,
     "floor" INT,
     room    INT,
+    cap     INT,
     FOREIGN KEY ("floor", room) REFERENCES MeetingRooms("floor", room)
 );
 
