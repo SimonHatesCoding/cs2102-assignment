@@ -893,12 +893,7 @@ INSERT INTO Departments VALUES
     (2, 'Finance'),
     (3, 'Operations Management'),
     (4, 'Human Resource'),
-    (5, 'IT');
-    (6, 'Safety');
-    (7, 'Cleanliness');
-    (8, 'Logistics');
-    (9, 'Legal');
-    (10, 'Research & Development')
+    (5, 'IT')
 ;
 
 --MeetingRooms
@@ -928,31 +923,7 @@ INSERT INTO Departments VALUES
     insert into MeetingRooms (room, "floor", rname, did) values (03, 05, 'Hufflepuff Meeting Room', 5);
     insert into MeetingRooms (room, "floor", rname, did) values (04, 05, 'Ravenclaw Meeting Room', 5);
     insert into MeetingRooms (room, "floor", rname, did) values (05, 05, 'Slytherin Meeting Room', 5);
-    insert into MeetingRooms (room, "floor", rname, did) values (01, 06, 'Database Meeting Room', 6);
-    insert into MeetingRooms (room, "floor", rname, did) values (02, 06, 'Gryffindor Meeting Room', 6);
-    insert into MeetingRooms (room, "floor", rname, did) values (03, 06, 'Hufflepuff Meeting Room', 6);
-    insert into MeetingRooms (room, "floor", rname, did) values (04, 06, 'Ravenclaw Meeting Room', 6);
-    insert into MeetingRooms (room, "floor", rname, did) values (05, 06, 'Slytherin Meeting Room', 6);
-    insert into MeetingRooms (room, "floor", rname, did) values (01, 07, 'Database Meeting Room', 7);
-    insert into MeetingRooms (room, "floor", rname, did) values (02, 07, 'Gryffindor Meeting Room', 7);
-    insert into MeetingRooms (room, "floor", rname, did) values (03, 07, 'Hufflepuff Meeting Room', 7);
-    insert into MeetingRooms (room, "floor", rname, did) values (04, 07, 'Ravenclaw Meeting Room', 7);
-    insert into MeetingRooms (room, "floor", rname, did) values (05, 07, 'Slytherin Meeting Room', 7);
-    insert into MeetingRooms (room, "floor", rname, did) values (01, 08, 'Database Meeting Room', 8);
-    insert into MeetingRooms (room, "floor", rname, did) values (02, 08, 'Gryffindor Meeting Room', 8);
-    insert into MeetingRooms (room, "floor", rname, did) values (03, 08, 'Hufflepuff Meeting Room', 8);
-    insert into MeetingRooms (room, "floor", rname, did) values (04, 08, 'Ravenclaw Meeting Room', 8);
-    insert into MeetingRooms (room, "floor", rname, did) values (05, 08, 'Slytherin Meeting Room', 8);
-    insert into MeetingRooms (room, "floor", rname, did) values (01, 09, 'Database Meeting Room', 9);
-    insert into MeetingRooms (room, "floor", rname, did) values (02, 09, 'Gryffindor Meeting Room', 9);
-    insert into MeetingRooms (room, "floor", rname, did) values (03, 09, 'Hufflepuff Meeting Room', 9);
-    insert into MeetingRooms (room, "floor", rname, did) values (04, 09, 'Ravenclaw Meeting Room', 9);
-    insert into MeetingRooms (room, "floor", rname, did) values (05, 09, 'Slytherin Meeting Room', 9);
-    insert into MeetingRooms (room, "floor", rname, did) values (01, 10, 'Database Meeting Room', 10);
-    insert into MeetingRooms (room, "floor", rname, did) values (02, 10, 'Gryffindor Meeting Room', 10);
-    insert into MeetingRooms (room, "floor", rname, did) values (03, 10, 'Hufflepuff Meeting Room', 10);
-    insert into MeetingRooms (room, "floor", rname, did) values (04, 10, 'Ravenclaw Meeting Room', 10);
-    insert into MeetingRooms (room, "floor", rname, did) values (05, 10, 'Slytherin Meeting Room', 10);
+
 
 
 ------------------------------------------------------------------------
