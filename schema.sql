@@ -66,9 +66,9 @@ CREATE TABLE Employees (
 CREATE TABLE HealthDeclarations (
     -- Teddy 
     eid         INT,
+    "date"        DATE,
     temperature float   NOT NULL,
-    date        DATE,
-    PRIMARY KEY (date, eid),
+    PRIMARY KEY ("date", eid),
     FOREIGN KEY (eid) REFERENCES Employees(eid)
 );
 

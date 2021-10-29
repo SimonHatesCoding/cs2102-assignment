@@ -194,15 +194,11 @@ $$ LANGUAGE plpgsql;
 ------------------------------------------------------------------------
 
 
-CREATE OR REPLACE FUNCTION declare_health
- (<param> <type>, <param> <type>, ...)
-RETURNS <type> AS $$
-DECLARE
-    -- variables here
-BEGIN
-    -- Teddy
-END
-$$ LANGUAGE plpgsql;
+CREATE OR REPLACE PROCEDURE declare_health
+ (IN eid INT, IN "date" DATE, IN temperature float)
+AS $$
+    INSERT INTO HealthDeclarations VALUES (eid, "date", temperature)
+$$ LANGUAGE sql;
 
 
 CREATE OR REPLACE FUNCTION book_room

@@ -28,8 +28,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-insert into Employees (eid, ename, email, resigned_date, did) values (1, 'Markus Mullan', 'mmullan0@miitbeian.gov.cn', null, 1);
+-- INSERT INTO Departments VALUES
+--     -- Tianle
+--     (1, 'Marketing'),
+--     (2, 'Finance'),
+--     (3, 'Operations Management'),
+--     (4, 'Human Resource'),
+--     (5, 'IT')
+-- ;
 
-CALL add_employee('John', '09876634', 'junior', 1);
-CALL add_employee('Elton', '89796334', 'senior', 1);
-CALL add_employee('Mark', '13452345', 'manager', 1);
+-- insert into Employees (eid, ename, email, resigned_date, did) values (1, 'Markus Mullan', 'mmullan0@miitbeian.gov.cn', null, 1);
+
+-- CALL add_employee('John', '09876634', 'junior', 1);
+-- CALL add_employee('Elton', '89796334', 'senior', 1);
+-- CALL add_employee('Mark', '13452345', 'manager', 1);
+
+CREATE OR REPLACE PROCEDURE declare_health
+ (IN eid INT, IN "date" DATE, IN temperature float)
+AS $$
+    INSERT INTO HealthDeclarations VALUES (eid, "date", temperature)
+$$ LANGUAGE sql;
+
+CALL declare_health(1, '2021-10-19', 36.8)
