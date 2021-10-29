@@ -212,6 +212,17 @@ END
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION check_fever()
+RETURNS TRIGGER AS $$
+BEGIN
+-- TraceTogether
+
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER TR_HealthDeclarations_AfterInsert
+AFTER INSERT ON HealthDeclarations
+FOR EACH ROW EXECUTE FUNCTION check_fever();
 ------------------------------------------------------------------------
 -- ADMIN (Readapt as necessary.)
 ------------------------------------------------------------------------
