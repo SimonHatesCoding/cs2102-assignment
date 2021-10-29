@@ -229,14 +229,19 @@ FOR EACH ROW EXECUTE FUNCTION check_fever();
 
 
 CREATE OR REPLACE FUNCTION non_compliance
- (<param> <type>, <param> <type>, ...)
-RETURNS <type> AS $$
-DECLARE
-    -- variables here
-BEGIN
-    -- Teddy
-END
-$$ LANGUAGE plpgsql;
+ (IN "start" DATE, IN "end" DATE, OUT eid INT, OUT "days" INT)
+RETURNS  SETOF RECORD  AS $$
+    WITH Declared AS (
+        SELECT eid, COUNT(temperature) AS counts
+        FROM HealthDeclarations
+        WHERE "date" BETWEEN "start" AND "end"
+        GROUP BY eid
+    )
+    SELECT E.eid AS eid, DATEDIFF(DAY, "start", "end") + 1 - COALESCE(D.counts,0) AS "days"
+    FROM Employees E
+    LEFT JOIN Declared D ON E.eid = D.eid
+    WHERE DATEDIFF(DAY, "start", "end") + 1 - COALESCE(D.counts,0) > 0;
+$$ LANGUAGE sql;
 
 
 CREATE OR REPLACE FUNCTION view_booking_report

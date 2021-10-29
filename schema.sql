@@ -59,30 +59,26 @@ CREATE TABLE Employees (
     ename           VARCHAR(50),
     email           VARCHAR(50),
     resigned_date   DATE,
-    did             INT,
-    FOREIGN KEY (did) REFERENCES Departments(did)
+    did             INT             REFERENCES Departments(did)
 );
 
 CREATE TABLE HealthDeclarations (
     -- Teddy 
-    eid         INT,
-    "date"        DATE,
+    eid         INT     REFERENCES Employees(eid),
+    "date"      DATE,
     temperature float   NOT NULL,
-    PRIMARY KEY ("date", eid),
-    FOREIGN KEY (eid) REFERENCES Employees(eid)
+    PRIMARY KEY ("date", eid)
 );
 
 CREATE TABLE Contacts (
     contact_number  VARCHAR(50),
-    eid             INT,
-    PRIMARY KEY (eid, contact_number),
-    FOREIGN KEY (eid) REFERENCES Employees(eid)
+    eid             INT             REFERENCES Employees(eid),
+    PRIMARY KEY (eid, contact_number)
 );
 
 CREATE TABLE Juniors (
     -- Teddy
-    eid     INT     PRIMARY KEY,
-    FOREIGN KEY (eid) REFERENCES Employees(eid)
+    eid     INT     PRIMARY KEY REFERENCES Employees(eid)
 );
 
 
@@ -132,13 +128,12 @@ CREATE TABLE "Sessions" (
 
 CREATE TABLE Joins (
     -- Teddy 
-    eid     INT,
+    eid     INT     REFERENCES Employees(eid),
     "time"  TIME,
     "date"  DATE,
     room    INT,
     "floor" INT,
     PRIMARY KEY (eid, "time", "date", room, "floor"),
-    FOREIGN KEY (eid) REFERENCES Employees(eid),
     FOREIGN KEY (room, "floor") REFERENCES MeetingRooms(room, "floor")
 );
 
@@ -147,7 +142,7 @@ CREATE TABLE Updates (
     -- Simon
     eid     INT     REFERENCES Managers(eid),
     "date"  DATE,
-    "floor"   INT,
+    "floor" INT,
     room    INT,
     FOREIGN KEY ("floor", room) REFERENCES MeetingRooms("floor", room)
 );
