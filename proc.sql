@@ -197,8 +197,12 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE declare_health
  (IN eid INT, IN "date" DATE, IN temperature float)
 AS $$
-    INSERT INTO HealthDeclarations VALUES (eid, "date", temperature)
+    INSERT INTO HealthDeclarations (eid, "date", temperature) VALUES (eid, "date", temperature) 
+    ON CONFLICT (eid, "date") DO UPDATE
+        SET temperature = EXCLUDED.temperature;
 $$ LANGUAGE sql;
+
+CALL declare_health(1, '2021-10-19', 37.0);
 
 
 CREATE OR REPLACE FUNCTION book_room
@@ -237,10 +241,10 @@ RETURNS  SETOF RECORD  AS $$
         WHERE "date" BETWEEN "start" AND "end"
         GROUP BY eid
     )
-    SELECT E.eid AS eid, DATEDIFF(DAY, "start", "end") + 1 - COALESCE(D.counts,0) AS "days"
+    SELECT E.eid AS eid, "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) AS "days"
     FROM Employees E
     LEFT JOIN Declared D ON E.eid = D.eid
-    WHERE DATEDIFF(DAY, "start", "end") + 1 - COALESCE(D.counts,0) > 0;
+    WHERE "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) > 0;
 $$ LANGUAGE sql;
 
 

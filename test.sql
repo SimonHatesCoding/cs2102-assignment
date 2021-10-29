@@ -46,7 +46,27 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE declare_health
  (IN eid INT, IN "date" DATE, IN temperature float)
 AS $$
-    INSERT INTO HealthDeclarations VALUES (eid, "date", temperature)
+    INSERT INTO HealthDeclarations (eid, "date", temperature) VALUES (eid, "date", temperature) 
+    ON CONFLICT (eid, "date") DO UPDATE
+        SET temperature = EXCLUDED.temperature;
 $$ LANGUAGE sql;
 
-CALL declare_health(1, '2021-10-19', 36.8)
+CALL declare_health(1, '2021-10-19', 37.0);
+
+CREATE OR REPLACE FUNCTION non_compliance
+ (IN "start" DATE, IN "end" DATE, OUT eid INT, OUT "days" INT)
+RETURNS  SETOF RECORD  AS $$
+    WITH Declared AS (
+        SELECT eid, COUNT(temperature) AS counts
+        FROM HealthDeclarations
+        WHERE "date" BETWEEN "start" AND "end"
+        GROUP BY eid
+    )
+    SELECT E.eid AS eid, "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) AS "days"
+    FROM Employees E
+    LEFT JOIN Declared D ON E.eid = D.eid
+    WHERE "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) > 0;
+$$ LANGUAGE sql;
+
+SELECT * FROM non_compliance('2021-09-10'::DATE, '2021-09-20'::DATE);
+SELECT * FROM non_compliance('2021-09-10', '2021-09-20');
