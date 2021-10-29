@@ -226,7 +226,8 @@ INSERT INTO HealthDeclarations VALUES
     insert into Employees (eid, ename, email, resigned_date, did) values (197, 'Glory Firebrace', 'gfirebrace5g@disqus.com', null, 3);
     insert into Employees (eid, ename, email, resigned_date, did) values (198, 'Mariquilla Trevna', 'mtrevna5h@state.tx.us', null, 4);
     insert into Employees (eid, ename, email, resigned_date, did) values (199, 'Lenora Haugh', 'lhaugh5i@ucoz.com', '05/26/2021', 5);
-    insert into Employees (eid, ename, email, resigned_date, did) values (200, 'Teodoor Bartomeu', 'tbartomeu5j@qq.com', null, 1);
+    insert into Employees (eid, ename, email, resigned_date, did) values (200, 'Teodoor Bartomeu', 'tbartomeu5j@qq.com', null, 1)
+;
 
 INSERT INTO Juniors
     -- Teddy
