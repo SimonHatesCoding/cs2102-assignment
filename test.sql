@@ -80,23 +80,23 @@ $$ LANGUAGE sql;
 CALL add_department(6, 'Safety');
 
 
-CREATE OR REPLACE PROCEDURE remove_department(IN did INT)
+CREATE OR REPLACE PROCEDURE remove_department(IN in_did INT， IN in_transfer_did INT)
  -- CANNOT DELETE 1,2,4,5,9; Operations will be transffered into HR; R&D is transffered into IT. 
  -- The rest of departments cannot be deleted. Raise exception if attempts are made.
 AS $$
-    DELETE FROM Departments D WHERE D.did = did;
-    IF did IN (6,7,8) THEN
-        DELETE FROM Employees E WHERE did = E.did;
-    ELSIF did = 3 THEN
-        UPDATE Employees E SET E.did = 4 WHERE E.did = 3;
-    ELSIF did = 10 THEN
-        UPDATE Employees E SET E.did = 5 WHERE E.did = 10;
+    IF in_did IN (6,7,8) THEN
+        DELETE FROM Employees WHERE in_did = .did;
+    ELSIF in_did = 3 THEN
+        UPDATE Employees SET did = 4 WHERE did = 3;
+    ELSIF in_did = 10 THEN
+        UPDATE Employees SET did = 5 WHERE did = 10;
     END IF;
+    DELETE FROM Departments WHERE did = in_did;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION core_departments() RETURNS TRIGGER AS $$
 BEGIN
-    RAISE NOTICE 'Some users are trying to delete or update the core departments';
+    RAISE EXCEPTION 'Some users are trying to delete or update the core departments';
     RETURN NULL;
 END;
 $$ LANGUAGE sql;
@@ -108,7 +108,7 @@ FOR EACH ROW WHERE OLD.did IN (1,2,4,5,9) EXECUTE FUNCTION core_departments();
 
 CREATE OR REPLACE PROCEDURE add_room
  (IN room INT, IN "floor" INT, IN rname VARCHAR(50), IN did INT)
-RETURN void AS $$
+AS $$
     -- Tianle
     INSERT INTO MeetingRooms VALUES (room, "floor", rname, did);
 $$ LANGUAGE sql;
@@ -120,3 +120,4 @@ AS $$
     UPDATE Updates SET "date" = OLD."date" wHERE room = OLD.room AND "floor" = OLD.floor;
     -- Tianle
 $$ LANGUAGE sql;
+-- Check whether the manager changes the cap
