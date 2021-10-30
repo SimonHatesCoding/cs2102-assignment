@@ -95,7 +95,6 @@ DECLARE
     eid INT := 0;
 BEGIN
     eid := generate_id();   
-    raise notice 'Value: %', eid;
     SELECT concat(ename, eid, '@hotmail.com') INTO email;
     INSERT INTO Employees (eid, ename, email, did) VALUES (eid, ename, email, did);
     INSERT INTO Contacts VALUES (contact, eid);
@@ -184,23 +183,118 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION is_start_end_valid
+ (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
+RETURNS BOOLEAN AS $$
+  -- Teddy
+DECLARE
+    found_sessions INT;
+    wanted_sessions INT;
+BEGIN
+    SELECT COUNT(*) INTO found_sessions
+    FROM "Sessions"
+    WHERE "date" = in_date AND
+          room = in_room AND
+          "floor" = in_floor AND
+          "time" BETWEEN in_start AND (in_end - interval '1 min');
+    
+    SELECT EXTRACT(epoch FROM in_end - in_time)/3600 INTO wanted_sessions;
 
-CREATE OR REPLACE FUNCTION join_meeting
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN eid INT)
-RETURNS <type> AS $$
--- cannot join approved meeting
--- cannot join if got fever
+    -- trying to join sessions that have not been booked
+    RETURN found_sessions == wanted_sessions;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION is_start_end_approved
+ (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
+RETURNS BOOLEAN AS $$
+  -- Tedddy
+DECLARE
+    approver INT;
+    curr_start TIME := in_start;
+BEGIN
+    WHILE curr_start < in_end
+        approver = NULL
+        SELECT approver_id INTO approver
+        FROM "Sessions"
+        WHERE "time" = in_start AND
+              "date" = in_date AND
+              room = in_room AND
+              "floor" = in_floor;
+        
+        -- cannot join approved meeting
+        IF approver NOT NULL THEN RETURN TRUE;
+        END IF;
+
+        curr_start := curr_start + interval '1 hour';
+    END LOOP;
+    RETURN FALSE;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE join_meeting
+ (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
+AS $$
+  -- Teddy
+DECLARE
+    temp INT;
+    curr_start TIME := in_start;
+BEGIN
+  -- cannot join if got fever
+    SELECT temperature INTO temp
+    FROM HealthDeclarations HD
+    WHERE HD.eid = in_eid
+    ORDER BY "date" DESC
+    LIMIT 1;
+
+    IF temp NOT NULL AND temp > 37.5 THEN RETURN;
+    END IF;
+
+  -- check that sessions from in_start to in_end exist
+    IF NOT is_start_end_valid(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
+    END IF;
+
+  -- find the sessions and check whether it's approved
+    IF is_start_end_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
+    END IF;
+
+  -- if everything is valid,
+    curr_start := in_start;
+    WHILE curr_start < in_end
+        INSERT INTO Joins (eid, "time", "date", room, "floor") VALUES (in_eid, curr_start, in_date, in_room, in_floor) 
+        ON CONFLICT (eid, "time", "date", room, "floor") DO NOTHING;
+
+        curr_start := curr_start + interval '1 hour';
+    END LOOP;
+END
 
 $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION leave_meeting
- (<param> <type>, <param> <type>, ...)
+ (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
 RETURNS <type> AS $$
+    -- Teddy
 DECLARE
     -- variables here
+    curr_start TIME := in_start;
 BEGIN
-    -- Teddy
+  -- check that sessions from in_start to in_end exist
+    IF NOT is_start_end_valid(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
+    END IF;
+
+  -- find the sessions and check whether it's approved
+    IF is_start_end_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
+    END IF;
+
+  -- delete the eid from the joins
+    DELETE FROM Joins
+    WHERE eid = in_eid AND
+          "date" = in_date AND
+          room = in_room AND
+          "floor" = in_floor AND
+          "time" BETWEEN in_start AND (in_end - interval '1 min');
+
 END
 $$ LANGUAGE plpgsql;
 
