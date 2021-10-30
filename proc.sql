@@ -153,7 +153,7 @@ BEGIN
         IF h >= 10 THEN t := '%:00', h;
         ELSE t:= '0%:00', h;
         END IF;
-        INSERT INTO Sessions VALUES (e_id, time, dt, room, floor);
+        INSERT INTO Sessions (eid, "time", "date", room, "floor") VALUES (e_id, time, dt, room, floor);
     END LOOP;
 
     END IF;
