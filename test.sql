@@ -151,5 +151,3 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-CALL approve_meeting(3,1,'2021-10-30',10,12,11);
-CALL approve_meeting(3,1,'2021-10-30',10,12,18);
