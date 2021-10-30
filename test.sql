@@ -98,8 +98,8 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-CALL book_room(3,1,'2021-10-30',10,12, 4);
-CALL book_room(3,1,'2021-10-30',10,12, 1);
+CALL book_room(3,1,'2021-10-30',10,12,4);
+CALL book_room(3,1,'2021-10-30',10,12,1);
 
 CREATE OR REPLACE PROCEDURE unbook_room
  (IN floor_num INT, IN room_num INT, IN dt DATE, IN start_hour INT, IN end_hour INT, IN e_id INT) AS $$
