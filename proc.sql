@@ -295,30 +295,25 @@ $$ LANGUAGE plpgsql;
     (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT) AS $$
     DECLARE
         -- variables here
-        e_temperature FLOAT;
         h INT;
         t TIME;
     BEGIN
-        -- Simon
-        SELECT temperature INTO e_temperature FROM HealthDeclarations WHERE eid = in_eid AND date = CURRENT_DATE; -- change check fever with the helper fn
+    -- Simon
         IF in_eid NOT IN (SELECT eid FROM Bookers) THEN RAISE EXCEPTION 'Employee % is not authorized to make bookings', in_eid;
-        ELSIF e_temperature IS NOT NULL AND e_temperature > 37.5 THEN RAISE EXCEPTION 'Employee % is having a fever (%C)', in_eid, e_temperature;
-        -- if NOT is_valid_room(floor_num, in_room)
-        ELSIF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN RAISE EXCEPTION '%-% is not found', in_floor, in_room;
-        ELSIF ((end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR (end_hour NOT BETWEEN 1 AND 24)) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
-        ELSIF ((in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND start_hour < date_part('hour', current_timestamp))) THEN RAISE EXCEPTION 'Not allowed to make a booking in the past: %, %', in_date, start_hour;
+        ELSIF NOT is_valid_room(in_floor, in_room) THEN RETURN;
+        ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
+        ELSIF is_past(in_date, start_hour) THEN RETURN;
+        ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
 
         ELSE FOR h IN start_hour..end_hour-1 LOOP -- all or nothing
-            IF h >= 10 THEN t := CAST(CONCAT(CAST(h AS TEXT), ':00') AS TIME);
-            ELSE t:= CAST(CONCAT('0', CAST(h AS TEXT), ':00') AS TIME);
+            IF h >= 10 THEN t := hour_int_to_time(h);
+            ELSE t:= hour_int_to_time(h);
             END IF;
             INSERT INTO Sessions (eid, "time", "date", room, "floor") VALUES (in_eid, time, in_date, in_room, in_floor);
         END LOOP;
 
-        CALL join_meeting(in_floor, in_room, in_date, start_hour, end_hour, in_eid);
-
         END IF;
-    END
+    END;
     $$ LANGUAGE plpgsql;
 
 
@@ -331,17 +326,18 @@ $$ LANGUAGE plpgsql;
         r RECORD;
     BEGIN
         -- Simon
-        FOR h IN start_hour..end_hour-1 LOOP
-            IF ((end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR end_hour NOT BETWEEN 1 AND 24) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
-            ELSIF ((in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND start_hour < date_part('hour', current_timestamp))) THEN RAISE EXCEPTION 'Not allowed to remove a booking in the past: %, %', dt, start_hour;
-            END IF;
+        IF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
+        ELSIF is_past(in_date, start_hour) THEN RETURN;
+        ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
 
+        ELSE FOR h IN start_hour..end_hour-1 LOOP
             SELECT * INTO r FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
             CONTINUE WHEN r IS NULL;
-
             DELETE FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
             DELETE FROM Joins WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
         END LOOP;
+
+        END IF;
     END
     $$ LANGUAGE plpgsql;
 
@@ -418,9 +414,9 @@ $$ LANGUAGE plpgsql;
         -- Simon
         -- Check if the meeting is alr approved
         IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
-        ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
-        ELSIF is_past(in_date, start_hour) THEN RAISE EXCEPTION 'Not allowed to remove a booking in the past: %, %', in_date, start_hour;
-        ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RAISE EXCEPTION 'Some sessions are already approved by other manager(s)';
+        ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
+        ELSIF is_past(in_date, start_hour) THEN RETURN;
+        ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
 
         ELSE FOR h in start_hour..end_hour-1 LOOP
             SELECT did INTO dpmt_b FROM Employees WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
@@ -428,8 +424,11 @@ $$ LANGUAGE plpgsql;
             IF dpmt_b <> dpmt_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, dpmt_a, in_floor, in_room, in_date, h, dpmt_b;
             ELSE
                 UPDATE Sessions SET approver_id = in_eid WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
+            END IF;
+        END LOOP;
+
         END IF;
-    END
+    END;
     $$ LANGUAGE plpgsql;
 
 
@@ -447,20 +446,40 @@ $$ LANGUAGE plpgsql;
 
 -- contact_tracing
     CREATE OR REPLACE FUNCTION contact_tracing
-    (IN IN_eid INT, IN D DATE)
-    AS $$
+    (IN in_eid INT, IN D DATE, OUT close_contacts_eid)
+    RETURNS SETOF RECORD AS $$
     DECLARE
         temp INT;
     BEGIN
     /*
-    IF eid DOESNT DECLARE ON D -> IGNORE
-    FIND CLOSE CONTACT
     REMOVE THEM FROM D+7 BUT ONLY THE ONES IN THE FUTURE
     */
         SELECT temperature INTO temp FROM HealthDeclarations HD 
-        WHERE HD.eid = in_eid AND HD.eid = CURRENT_DATE;
+        WHERE HD.eid = in_eid AND HD.eid = D;
 
+        IF temp IS NULL THEN
+            RAISE EXCEPTION 'eid: % did not declare temperature on date: %', in_eid, D;
+        ELSIF temp <= 37.5 THEN
+            RAISE NOTICE 'eid: % does not have fever, cancelling contact tracing...', in_eid;
+            RETURN;
+        END IF;
 
+        -- find close contact
+        WITH AffectedSessions AS (
+            SELECT S.time, S.date, S.room, S.floor
+            FROM "Sessions" S
+            LEFT JOIN Joins J 
+            ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
+            WHERE J.eid = in_eid AND S.date BETWEEN D - interval '3 days' AND D;           
+        )
+        SELECT DISTINCT(J.eid) AS close_contacts_eid
+        FROM AffectedSessions S
+        LEFT JOIN Joins J
+        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
+
+        -- remove from D to D+7
+        DELETE FROM Joins J
+        WHERE J.date BETWEEN D AND D + interval '7 days' AND J.date AFTER CURRENT_DATE AND J.eid IN close_contacts_eid;
 
     END;
     $$ LANGUAGE plpgsql;
@@ -535,12 +554,25 @@ $$ LANGUAGE plpgsql;
     BEGIN
         IF has_fever(NEW.booker_id) THEN RETURN NULL;
         ELSE RETURN NEW;
-    END
+    END;
     $$ LANGUAGE plpgsql;
 
     CREATE TRIGGER TR_Sessions_BeforeInsert
     BEFORE INSERT ON "Sessions"
     FOR EACH ROW EXECUTE FUNCTION fever_cannot_book();
+
+
+    CREATE OR REPLACE FUNCTION booker_join_meeting()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        INSERT INTO Joins (eid, "time", "date", room, "floor")
+        VALUES (NEW.booker_id, NEW.time, NEW.date, NEW.room, NEW.floor);
+    END;
+    $$ LANGUAGE plpgsql;
+
+    CREATE TRIGGER TR_Sessions_AfterInsert
+    AFTER INSERT ON Sessions
+    FOR EACH ROW EXECUTE FUNCTION booker_join_meeting();
 
 -- HealthDeclarations
     CREATE OR REPLACE FUNCTION check_fever()
