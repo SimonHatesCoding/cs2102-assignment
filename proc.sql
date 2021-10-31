@@ -166,46 +166,50 @@
     END
     $$ LANGUAGE plpgsql;
 
+  -- is_valid_hour
+    CREATE OR REPLACE FUNCTION is_valid_hour(IN start_hour INT, IN end_hour INT)
+    RETURNS BOOLEAN AS $$
+    BEGIN
+        IF (end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR (end_hour NOT BETWEEN 1 AND 24) THEN RETURN FALSE;
+        ELSE RETURN TRUE;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+
+  -- is_past
+    CREATE OR REPLACE FUNCTION is_past(IN in_date DATE, in_hour INT)
+    RETURNS BOOLEAN AS $$
+    BEGIN
+        IF (in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND in_hour < date_part('hour', current_timestamp)) THEN RETURN TRUE;
+        ELSE RETURN FALSE;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+
+  -- is_valid_room
+    CREATE OR REPLACE FUNCTION is_valid_room(IN in_floor INT, IN in_room INT)
+    RETURNS BOOLEAN AS $$
+    BEGIN
+        IF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN RETURN FALSE;
+        ELSE RETURN TRUE;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+
+  -- hour_int_to_time
+    CREATE OR REPLACE FUNCTION hour_int_to_time(IN in_hour INT)
+    RETURNS TIME AS $$
+    BEGIN
+        IF in_hour >= 10 THEN RETURN CAST(CONCAT(CAST(in_hour AS TEXT), ':00') AS TIME);
+        ELSE RETURN CAST(CONCAT('0', CAST(in_hour AS TEXT), ':00') AS TIME);
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+
 
 ------------------------------------------------------------------------
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
-
-CREATE OR REPLACE FUNCTION is_valid_hour(IN start_hour INT, IN end_hour INT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    IF (end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR (end_hour NOT BETWEEN 1 AND 24) THEN RETURN FALSE;
-    ELSE RETURN TRUE;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION is_past(IN in_date DATE, in_hour INT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    IF (in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND in_hour < date_part('hour', current_timestamp)) THEN RETURN TRUE;
-    ELSE RETURN FALSE;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION is_valid_room(IN in_floor INT, IN in_room INT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    IF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN RETURN FALSE;
-    ELSE RETURN TRUE;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION hour_int_to_time(IN in_hour INT)
-RETURNS TIME AS $$
-BEGIN
-    IF in_hour >= 10 THEN RETURN CAST(CONCAT(CAST(in_hour AS TEXT), ':00') AS TIME);
-    ELSE RETURN CAST(CONCAT('0', CAST(in_hour AS TEXT), ':00') AS TIME);
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
 
 
 
