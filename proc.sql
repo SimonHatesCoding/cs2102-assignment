@@ -1,6 +1,15 @@
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+-- PROCEDURES & TRIGGERS
+--
+------------------------------------------------------------------------
+------------------------------------------------------------------------
 
--- HELPERS
-  -- all_sessions_exist
+------------------------------------------------------------------------
+-- HELPERS (for use in other procedures/functions)
+------------------------------------------------------------------------
+-- all_sessions_exist
     CREATE OR REPLACE FUNCTION all_sessions_exist
     (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
     RETURNS BOOLEAN AS $$
@@ -23,7 +32,7 @@
     END
     $$ LANGUAGE plpgsql;
 
-  -- any_session_exist
+-- any_session_exist
     CREATE OR REPLACE FUNCTION any_session_exist
     (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
     RETURNS BOOLEAN AS $$
@@ -43,7 +52,7 @@
     END
     $$ LANGUAGE plpgsql;
 
-  -- eid_in_all_sessions
+-- eid_in_all_sessions
     CREATE OR REPLACE FUNCTION eid_in_all_sessions
     (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN eid INT)
     RETURNS BOOLEAN AS $$
@@ -67,7 +76,7 @@
     END
     $$ LANGUAGE plpgsql;
 
-  -- any_session_approved
+-- any_session_approved
     CREATE OR REPLACE FUNCTION any_session_approved
     (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
     RETURNS BOOLEAN AS $$
@@ -95,7 +104,7 @@
     END
     $$ LANGUAGE plpgsql;
 
-  -- has_fever
+-- has_fever
     CREATE OR REPLACE FUNCTION has_fever
     (IN in_eid INT)
     RETURNS BOOLEAN AS $$
@@ -118,7 +127,7 @@
     END
     $$ LANGUAGE plpgsql;
 
-  -- is_valid_hour
+-- is_valid_hour
     CREATE OR REPLACE FUNCTION is_valid_hour(IN start_hour INT, IN end_hour INT)
     RETURNS BOOLEAN AS $$
     BEGIN
@@ -128,7 +137,7 @@
     END;
     $$ LANGUAGE plpgsql;
 
-  -- is_past
+-- is_past
     CREATE OR REPLACE FUNCTION is_past(IN in_date DATE, in_hour INT)
     RETURNS BOOLEAN AS $$
     BEGIN
@@ -138,7 +147,7 @@
     END;
     $$ LANGUAGE plpgsql;
 
-  -- is_valid_room
+-- is_valid_room
     CREATE OR REPLACE FUNCTION is_valid_room(IN in_floor INT, IN in_room INT)
     RETURNS BOOLEAN AS $$
     BEGIN
@@ -148,7 +157,7 @@
     END;
     $$ LANGUAGE plpgsql;
 
-  -- hour_int_to_time
+-- hour_int_to_time
     CREATE OR REPLACE FUNCTION hour_int_to_time(IN in_hour INT)
     RETURNS TIME AS $$
     BEGIN
@@ -172,90 +181,84 @@
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
 
-
-
 CREATE OR REPLACE PROCEDURE add_department
- (<param> <type>, <param> <type>, ...)
+(<param> <type>, <param> <type>, ...)
 AS $$
     -- Tianle
 $$ LANGUAGE sql;
-
 
 CREATE OR REPLACE PROCEDURE remove_department
- (<param> <type>, <param> <type>, ...)
+(<param> <type>, <param> <type>, ...)
 AS $$
     -- Tianle
 $$ LANGUAGE sql;
-
 
 CREATE OR REPLACE PROCEDURE add_room
- (<param> <type>, <param> <type>, ...)
+(<param> <type>, <param> <type>, ...)
 AS $$
     -- Tianle
 $$ LANGUAGE sql;
-
 
 CREATE OR REPLACE PROCEDURE change_capacity
- (<param> <type>, <param> <type>, ...)
+(<param> <type>, <param> <type>, ...)
 AS $$
     -- Tianle
 $$ LANGUAGE sql;
 
+-- generate_id
+    CREATE OR REPLACE FUNCTION generate_id(OUT eid INT)
+    RETURNS INT AS $$
+        SELECT MAX(eid)+1 FROM Employees;
+    $$ LANGUAGE sql;
 
-CREATE OR REPLACE FUNCTION generate_id(OUT eid INT)
-RETURNS INT AS $$
-    SELECT MAX(eid)+1 FROM Employees;
-$$ LANGUAGE sql;
+-- add_employee
+    CREATE OR REPLACE PROCEDURE add_employee
+    (IN in_ename VARCHAR(50), IN in_contact VARCHAR(50), IN kind VARCHAR(10), IN in_did INT)
+    AS $$
+    -- Teddy
+    DECLARE
+        email VARCHAR(50);
+        eid INT := 0;
+    BEGIN
+        eid := generate_id();   
+        SELECT concat(ename, eid, '@hotmail.com') INTO email;
+        INSERT INTO Employees (eid, ename, email, did, contact) 
+        VALUES (eid, in_ename, email, in_did, in_contact);
+        IF kind = 'junior' THEN INSERT INTO Juniors VALUES (eid);
+        ELSIF kind = 'senior' THEN 
+            INSERT INTO Bookers VALUES (eid);
+            INSERT INTO Seniors VALUES (eid);
+        ELSIF kind = 'manager' THEN
+            INSERT INTO Bookers VALUES (eid);
+            INSERT INTO Managers VALUES (eid);
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
 
-
-CREATE OR REPLACE PROCEDURE add_employee
- (IN in_ename VARCHAR(50), IN in_contact VARCHAR(50), IN kind VARCHAR(10), IN in_did INT)
-AS $$
- -- Teddy
-DECLARE
-    email VARCHAR(50);
-    eid INT := 0;
-BEGIN
-    eid := generate_id();   
-    SELECT concat(ename, eid, '@hotmail.com') INTO email;
-    INSERT INTO Employees (eid, ename, email, did, contact) 
-    VALUES (eid, in_ename, email, in_did, in_contact);
-    IF kind = 'junior' THEN INSERT INTO Juniors VALUES (eid);
-    ELSIF kind = 'senior' THEN 
-        INSERT INTO Bookers VALUES (eid);
-        INSERT INTO Seniors VALUES (eid);
-    ELSIF kind = 'manager' THEN
-        INSERT INTO Bookers VALUES (eid);
-        INSERT INTO Managers VALUES (eid);
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE PROCEDURE remove_employee
- (IN in_eid INT, IN in_date DATE)
-AS $$
-DECLARE
-    emp_id INT;
-BEGIN
-    SELECT eid INTO emp_id FROM Employees WHERE eid = in_eid;
-    IF eid NOT IN (SELECT eid FROM Bookers) THEN RAISE EXCEPTION 'Employee % does not exist', e_id;
-    ELSE 
-    -- edit resigned date for employee
-    -- remove employee from all related records
-    ---- Joins
-    ---- Sessions (check if booker resigns -> delete sessions)
-END;
-$$ LANGUAGE sql;
+-- remove_employee
+    CREATE OR REPLACE PROCEDURE remove_employee
+    (IN in_eid INT, IN in_date DATE)
+    AS $$
+    DECLARE
+        emp_id INT;
+    BEGIN
+        SELECT eid INTO emp_id FROM Employees WHERE eid = in_eid;
+        IF eid NOT IN (SELECT eid FROM Bookers) THEN RAISE EXCEPTION 'Employee % does not exist', e_id;
+        ELSE 
+        -- edit resigned date for employee
+        -- remove employee from all related records
+        ---- Joins
+        ---- Sessions (check if booker resigns -> delete sessions)
+    END;
+    $$ LANGUAGE sql;
 
 
 ------------------------------------------------------------------------
 -- CORE (Readapt as necessary.)
 ------------------------------------------------------------------------
 
-
 CREATE OR REPLACE FUNCTION search_room
- (<param> <type>, <param> <type>, ...)
+(<param> <type>, <param> <type>, ...)
 RETURNS <type> AS $$
 DECLARE
     -- variables here
@@ -264,190 +267,241 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION is_valid_eid(IN eid INT)
-RETURNS BOOLEAN AS $$
+-- is_valid_eid
+    CREATE OR REPLACE FUNCTION is_valid_eid(IN eid INT)
+    RETURNS BOOLEAN AS $$
+    -- code here
+    $$ LANGUAGE plpgsql;
 
-$$ LANGUAGE plpgsql;
 
--- make a hour function
+-- TODO: make a hour function
+-- book_room
+    CREATE OR REPLACE PROCEDURE book_room
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT) AS $$
+    DECLARE
+        -- variables here
+        e_temperature FLOAT;
+        h INT;
+        t TIME;
+    BEGIN
+        -- Simon
+        SELECT temperature INTO e_temperature FROM HealthDeclarations WHERE eid = in_eid AND date = CURRENT_DATE; -- change check fever with the helper fn
+        IF in_eid NOT IN (SELECT eid FROM Bookers) THEN RAISE EXCEPTION 'Employee % is not authorized to make bookings', in_eid;
+        ELSIF e_temperature IS NOT NULL AND e_temperature > 37.5 THEN RAISE EXCEPTION 'Employee % is having a fever (%C)', in_eid, e_temperature;
+        -- if NOT is_valid_room(floor_num, in_room)
+        ELSIF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN RAISE EXCEPTION '%-% is not found', in_floor, in_room;
+        ELSIF ((end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR (end_hour NOT BETWEEN 1 AND 24)) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
+        ELSIF ((in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND start_hour < date_part('hour', current_timestamp))) THEN RAISE EXCEPTION 'Not allowed to make a booking in the past: %, %', in_date, start_hour;
 
-CREATE OR REPLACE PROCEDURE book_room
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT) AS $$
-DECLARE
-    -- variables here
-    e_temperature FLOAT;
-    h INT;
-    t TIME;
-BEGIN
-    -- Simon
-    IF in_eid NOT IN (SELECT eid FROM Bookers) THEN RAISE EXCEPTION 'Employee % is not authorized to make bookings', in_eid;
-    ELSIF NOT is_valid_room(in_floor, in_room) THEN RAISE EXCEPTION '%-% is not found', in_floor, in_room;
-    ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
-    ELSIF is_past(in_date, start_hour) THEN RAISE EXCEPTION 'Not allowed to make a booking in the past: %, %', in_date, start_hour;
-    ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RAISE EXCEPTION 'Some session(s) are already booked and approved for your specified period and room';
+        ELSE FOR h IN start_hour..end_hour-1 LOOP -- all or nothing
+            IF h >= 10 THEN t := CAST(CONCAT(CAST(h AS TEXT), ':00') AS TIME);
+            ELSE t:= CAST(CONCAT('0', CAST(h AS TEXT), ':00') AS TIME);
+            END IF;
+            INSERT INTO Sessions (eid, "time", "date", room, "floor") VALUES (in_eid, time, in_date, in_room, in_floor);
+        END LOOP;
 
-    ELSE FOR h IN start_hour..end_hour-1 LOOP -- all or nothing
-        IF h >= 10 THEN t := CAST(CONCAT(CAST(h AS TEXT), ':00') AS TIME);
-        ELSE t:= CAST(CONCAT('0', CAST(h AS TEXT), ':00') AS TIME);
+        CALL join_meeting(in_floor, in_room, in_date, start_hour, end_hour, in_eid);
+
         END IF;
-        INSERT INTO Sessions (eid, "time", "date", room, "floor") VALUES (in_eid, time, in_date, in_room, in_floor);
-    END LOOP;
-
-    CALL join_meeting(in_floor, in_room, in_date, start_hour, end_hour, in_eid);
-
-    END IF;
-END
-$$ LANGUAGE plpgsql;
+    END
+    $$ LANGUAGE plpgsql;
 
 
 
-CREATE OR REPLACE PROCEDURE unbook_room
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT) AS $$
-DECLARE
-    -- variables here
-    h INT;
-    r RECORD;
-BEGIN
-    -- Simon
-    IF NOT is_valid_hour(start_hour, end_hour) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
-    ELSIF is_past(in_date, start_hour) THEN RAISE EXCEPTION 'Not allowed to remove a booking in the past: %, %', in_date, start_hour;
-    ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, start_hour, end_hour) THEN RAISE EXCEPTION 'Some session(s) in the query are not present in Sessions';
+-- unbook_room
+    CREATE OR REPLACE PROCEDURE unbook_room
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT) AS $$
+    DECLARE
+        -- variables here
+        h INT;
+        r RECORD;
+    BEGIN
+        -- Simon
+        FOR h IN start_hour..end_hour-1 LOOP
+            IF ((end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR end_hour NOT BETWEEN 1 AND 24) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
+            ELSIF ((in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND start_hour < date_part('hour', current_timestamp))) THEN RAISE EXCEPTION 'Not allowed to remove a booking in the past: %, %', dt, start_hour;
+            END IF;
 
-    ELSE FOR h IN start_hour..end_hour-1 LOOP
-        SELECT * INTO r FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
-        CONTINUE WHEN r IS NULL;
-        DELETE FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
-        DELETE FROM Joins WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
-    END LOOP;
+            SELECT * INTO r FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
+            CONTINUE WHEN r IS NULL;
 
-    END IF;
-END
-$$ LANGUAGE plpgsql;
+            DELETE FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
+            DELETE FROM Joins WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
+        END LOOP;
+    END
+    $$ LANGUAGE plpgsql;
 
-
-CREATE OR REPLACE PROCEDURE join_meeting
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
-AS $$
-  -- Teddy
-DECLARE
-    temp INT;
-    curr_start TIME := in_start;
-BEGIN
-  -- check that sessions from in_start to in_end exist
-    IF NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
-  -- find the sessions and check whether it's approved
-    ELSIF any_session_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
-    END IF;
-
-  -- if everything is valid,
-    curr_start := in_start;
-    WHILE curr_start < in_end
-        INSERT INTO Joins (eid, "time", "date", room, "floor")
-        VALUES (in_eid, curr_start, in_date, in_room, in_floor);
-
-        curr_start := curr_start + interval '1 hour';
-    END LOOP;
-END
-
-$$ LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE FUNCTION leave_meeting
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
-RETURNS <type> AS $$
+-- join_meeting
+    CREATE OR REPLACE PROCEDURE join_meeting
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
+    AS $$
     -- Teddy
-BEGIN 
-  -- check that sessions from in_start to in_end exist
-    IF NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
-  -- find the sessions and check whether it's approved
-    ELSIF any_session_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
-    END IF;
-
-  -- delete the eid from the joins
-    DELETE FROM Joins
-    WHERE eid = in_eid AND
-          "date" = in_date AND
-          room = in_room AND
-          "floor" = in_floor AND
-          "time" BETWEEN in_start AND (in_end - interval '1 min');
-
-END
-$$ LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE PROCEDURE approve_meeting
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT) AS $$
-DECLARE
-    -- variables here
-    h INT;
-    dpmt_b INT;
-    dpmt_a INT;
-BEGIN
-    -- Simon
-    -- Check if the meeting is alr approved
-    IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
-    ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
-    ELSIF is_past(in_date, start_hour) THEN RAISE EXCEPTION 'Not allowed to remove a booking in the past: %, %', in_date, start_hour;
-    ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RAISE EXCEPTION 'Some sessions are already approved by other manager(s)';
-
-    ELSE FOR h in start_hour..end_hour-1 LOOP
-        SELECT did INTO dpmt_b FROM Employees WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
-        SELECT did INTO dpmt_a FROM Employees WHERE eid = in_eid;
-        IF dpmt_b <> dpmt_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, dpmt_a, in_floor, in_room, in_date, h, dpmt_b;
-        ELSE
-            UPDATE Sessions SET approver_id = in_eid WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
+    DECLARE
+        temp INT;
+        curr_start TIME := in_start;
+    BEGIN
+    -- check that sessions from in_start to in_end exist
+        IF NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
+    -- find the sessions and check whether it's approved
+        ELSIF any_session_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
         END IF;
-    END LOOP;
 
-    END IF;
-END
-$$ LANGUAGE plpgsql;
+    -- if everything is valid,
+        curr_start := in_start;
+        WHILE curr_start < in_end
+            INSERT INTO Joins (eid, "time", "date", room, "floor")
+            VALUES (in_eid, curr_start, in_date, in_room, in_floor);
+
+            curr_start := curr_start + interval '1 hour';
+        END LOOP;
+    END
+    $$ LANGUAGE plpgsql;
+
+-- leave_meeting
+    CREATE OR REPLACE FUNCTION leave_meeting
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
+    RETURNS <type> AS $$
+        -- Teddy
+    BEGIN 
+    -- check that sessions from in_start to in_end exist
+        IF NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
+    -- find the sessions and check whether it's approved
+        ELSIF any_session_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
+        END IF;
+
+    -- delete the eid from the joins
+        DELETE FROM Joins
+        WHERE eid = in_eid AND
+            "date" = in_date AND
+            room = in_room AND
+            "floor" = in_floor AND
+            "time" BETWEEN in_start AND (in_end - interval '1 min');
+    END
+    $$ LANGUAGE plpgsql;
+
+
+-- approve_meeting
+    CREATE OR REPLACE PROCEDURE approve_meeting
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT) AS $$
+    DECLARE
+        -- variables here
+        h INT;
+        dpmt_b INT;
+        dpmt_a INT;
+    BEGIN
+        -- Simon
+        -- Check if the meeting is alr approved
+        IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
+        ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
+        ELSIF is_past(in_date, start_hour) THEN RAISE EXCEPTION 'Not allowed to remove a booking in the past: %, %', in_date, start_hour;
+        ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RAISE EXCEPTION 'Some sessions are already approved by other manager(s)';
+
+        ELSE FOR h in start_hour..end_hour-1 LOOP
+            SELECT did INTO dpmt_b FROM Employees WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
+            SELECT did INTO dpmt_a FROM Employees WHERE eid = in_eid;
+            IF dpmt_b <> dpmt_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, dpmt_a, in_floor, in_room, in_date, h, dpmt_b;
+            ELSE
+                UPDATE Sessions SET approver_id = in_eid WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
+        END IF;
+    END
+    $$ LANGUAGE plpgsql;
 
 
 ------------------------------------------------------------------------
 -- HEALTH (Readapt as necessary.)
 ------------------------------------------------------------------------
+-- declare_health
+    CREATE OR REPLACE PROCEDURE declare_health
+    (IN eid INT, IN "date" DATE, IN temperature float)
+    AS $$
+        INSERT INTO HealthDeclarations (eid, "date", temperature) VALUES (eid, "date", temperature) 
+        ON CONFLICT (eid, "date") DO UPDATE
+            SET temperature = EXCLUDED.temperature;
+    $$ LANGUAGE sql;
 
+-- contact_tracing
+    CREATE OR REPLACE FUNCTION contact_tracing
+    (IN IN_eid INT, IN D DATE)
+    AS $$
+    DECLARE
+        temp INT;
+    BEGIN
+    /*
+    IF eid DOESNT DECLARE ON D -> IGNORE
+    FIND CLOSE CONTACT
+    REMOVE THEM FROM D+7 BUT ONLY THE ONES IN THE FUTURE
+    */
+        -- use the latest health declaration
+        SELECT temperature INTO temp
+        FROM HealthDeclarations
+        WHERE eid = eid
+        ORDER BY "date" DESC
+        LIMIT 1;
 
-CREATE OR REPLACE PROCEDURE declare_health
- (IN eid INT, IN "date" DATE, IN temperature float)
-AS $$
-    INSERT INTO HealthDeclarations (eid, "date", temperature) VALUES (eid, "date", temperature) 
-    ON CONFLICT (eid, "date") DO UPDATE
-        SET temperature = EXCLUDED.temperature;
-$$ LANGUAGE sql;
-
-CALL declare_health(1, '2021-10-19', 37.0);
-
-
-
-
-CREATE OR REPLACE FUNCTION contact_tracing
-(IN IN_eid INT, IN D DATE)
-AS $$
-DECLARE
-    temp INT;
-BEGIN
-/*
-IF eid DOESNT DECLARE ON D -> IGNORE
-FIND CLOSE CONTACT
-REMOVE THEM FROM D+7 BUT ONLY THE ONES IN THE FUTURE
-*/
-    -- use the latest health declaration
-    SELECT temperature INTO temp
-    FROM HealthDeclarations
-    WHERE eid = eid
-    ORDER BY "date" DESC
-    LIMIT 1;
-
-    raise notice 'Value: %', temp;
-END;
-
-$$ LANGUAGE plpgsql;
+        raise notice 'Value: %', temp;
+    END;
+    $$ LANGUAGE plpgsql;
 
 ------------------------------------------------------------------------
 -- ADMIN (Readapt as necessary.)
 ------------------------------------------------------------------------
+-- non-compliance
+    CREATE OR REPLACE FUNCTION non_compliance
+    (IN "start" DATE, IN "end" DATE, OUT eid INT, OUT "days" INT)
+    RETURNS  SETOF RECORD  AS $$
+        -- Teddy
+        WITH Declared AS (
+            SELECT eid, COUNT(temperature) AS counts
+            FROM HealthDeclarations
+            WHERE "date" BETWEEN "start" AND "end"
+            GROUP BY eid
+        )
+        SELECT E.eid AS eid, "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) AS "days"
+        FROM Employees E
+        LEFT JOIN Declared D ON E.eid = D.eid
+        WHERE "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) > 0;
+    $$ LANGUAGE sql;
+
+
+-- view_booking_report
+    CREATE OR REPLACE FUNCTION view_booking_report
+    (IN in_start_date DATE, IN in_eid INT)
+    RETURNS SETOF RECORD AS $$
+        --Petrick
+        SELECT "floor", room, "date", "time", 
+        CASE 
+            WHEN approver_id IS NOT NULL THEN TRUE
+            ELSE FALSE
+        END AS is_approved
+        FROM Sessions
+        WHERE "date" > in_start_date AND booker_id = in_eid
+        ORDER BY "date" ASC, "time" ASC
+    $$ LANGUAGE sql;
+
+-- view_future_meeting
+    CREATE OR REPLACE FUNCTION view_future_meeting
+    (IN in_start_date DATE, IN in_eid INT)
+    RETURNS SETOF RECORD AS $$
+        --Petrick
+        SELECT "floor", room, "date", "time", 
+        FROM Joins
+        WHERE "date" > in_start_date AND eid = in_eid
+        ORDER BY "date" ASC, "time" ASC
+    END
+    $$ LANGUAGE sql;
+
+-- view_manager_report
+    CREATE OR REPLACE FUNCTION view_manager_report
+    (IN in_start_date DATE, IN in_eid INT)
+    RETURNS SETOF RECORD AS $$
+        --Petrick
+        SELECT S."floor", S.room, S."date", S."time", S.booker_id
+        FROM Sessions S, MeetingRooms R, Managers M, Employees E
+        WHERE in_eid in (SELECT eid FROM M)
+        AND "date" > in_start_date
+        AND (SELECT did FROM E WHERE eid = in_eid) = (SELECT did FROM R WHERE S."floor" = R."floor" AND S."room" = R."room")
+        ORDER BY "date" ASC, "time" ASC
+    $$ LANGUAGE sql;
 
 
 CREATE OR REPLACE FUNCTION non_compliance
@@ -508,7 +562,8 @@ $$ LANGUAGE sql;
 
 
 -- TRIGGERS
-  -- Sessions
+------------------------------------------------------------------------
+-- Sessions
     CREATE OR REPLACE FUNCTION fever_cannot_book()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -521,7 +576,7 @@ $$ LANGUAGE sql;
     BEFORE INSERT ON "Sessions"
     FOR EACH ROW EXECUTE FUNCTION fever_cannot_book();
 
-  -- HealthDeclarations
+-- HealthDeclarations
     CREATE OR REPLACE FUNCTION check_fever()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -545,7 +600,7 @@ $$ LANGUAGE sql;
     AFTER INSERT OR UPDATE ON HealthDeclarations
     FOR EACH ROW EXECUTE FUNCTION check_fever();
 
-  -- Joins
+-- Joins
     CREATE OR REPLACE PROCEDURE capacity_and_fever_check()
     RETURNS TRIGGER AS $$
     DECLARE
