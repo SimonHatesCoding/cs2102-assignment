@@ -193,61 +193,58 @@
     END;
     $$ LANGUAGE plpgsql;
 
-------------------------------------------------------------------------
--- BASIC (Readapt as necessary.)
-------------------------------------------------------------------------
-
-CREATE OR REPLACE PROCEDURE add_department
-(IN did INT, IN dname VARCHAR(50)) 
-AS $$
-    -- Tianle
-    INSERT INTO Departments VALUES (did, dname);
-$$ LANGUAGE sql;
-
-CREATE OR REPLACE PROCEDURE remove_department
-(IN did INT)
-AS $$
-    -- Tianle
-    DELETE FROM Departments WHERE did = OLD.did;
-    IF did IN (6, 7, 8) THEN
-    DELETE FROM Employees WHERE did = OLD.did;
-    ELSIF did = 3 THEN
-    UPDATE Employees SET OLD.did = 4 WHERE OLD.did = 4;
-    ELSIF did = 10 THEN
-    UPDATE Employees SET OLD.did = 5 WHERE OLD.did = 5;
-$$ LANGUAGE sql;
-
-CREATE OR REPLACE FUNCTION core_departments() RETURNS TRIGGER AS $$
-BEGIN
-    RAISE NOTICE 'Some users are trying to delete or update the core departments';
-    RETURN NULL;
-END;
-$$ LANGUAGE sql;
-
-CREATE OR REPLACE TRIGGER check_core
-BEFORE DELETE OR UPDATE ON Departments
-FOR EACH ROW WHERE OLD.did IN (1,2,4,5,9) EXECUTE FUNCTION core_departments();
-
-CREATE OR REPLACE PROCEDURE add_room
- (IN room INT, IN "floor" INT, IN rname VARCHAR(50), IN did INT)
-RETURN void AS $$
-
-    -- Tianle
-    INSERT INTO MeetingRooms VALUES (room, "floor", rname, did);
-$$ LANGUAGE sql;
-
-CREATE OR REPLACE PROCEDURE change_capacity
-(IN room INT, IN "floor" INT, IN capacity INT, IN DATE )
-AS $$
-    UPDATE Updates SET cap = capacity wHERE room = OLD.room AND "floor" = OLD.floor;
-    UPDATE Updates SET "date" = OLD."date" wHERE room = OLD.room AND "floor" = OLD.floor;
-    -- Tianle
-$$ LANGUAGE sql;
+-- is_valid_eid
+    CREATE OR REPLACE FUNCTION is_valid_eid(IN eid INT)
+    RETURNS BOOLEAN AS $$
+    -- code here
+    $$ LANGUAGE plpgsql;
 
 -- generate_id
     CREATE OR REPLACE FUNCTION generate_id(OUT eid INT)
     RETURNS INT AS $$
         SELECT MAX(eid)+1 FROM Employees;
+    $$ LANGUAGE sql;
+
+------------------------------------------------------------------------
+-- BASIC (Readapt as necessary.)
+------------------------------------------------------------------------
+-- add_department
+    CREATE OR REPLACE PROCEDURE add_department
+    (IN did INT, IN dname VARCHAR(50)) 
+    AS $$
+        -- Tianle
+        INSERT INTO Departments VALUES (did, dname);
+    $$ LANGUAGE sql;
+
+-- remove_department
+    CREATE OR REPLACE PROCEDURE remove_department
+    (IN did INT)
+    AS $$
+        -- Tianle
+        DELETE FROM Departments WHERE did = OLD.did;
+        IF did IN (6, 7, 8) THEN
+        DELETE FROM Employees WHERE did = OLD.did;
+        ELSIF did = 3 THEN
+        UPDATE Employees SET OLD.did = 4 WHERE OLD.did = 4;
+        ELSIF did = 10 THEN
+        UPDATE Employees SET OLD.did = 5 WHERE OLD.did = 5;
+    $$ LANGUAGE sql;
+
+-- add_room
+    CREATE OR REPLACE PROCEDURE add_room
+    (IN room INT, IN "floor" INT, IN rname VARCHAR(50), IN did INT)
+    AS $$
+        -- Tianle
+        INSERT INTO MeetingRooms VALUES (room, "floor", rname, did);
+    $$ LANGUAGE sql;
+
+-- change_capacity
+    CREATE OR REPLACE PROCEDURE change_capacity
+    (IN room INT, IN "floor" INT, IN capacity INT, IN DATE )
+    AS $$
+        UPDATE Updates SET cap = capacity wHERE room = OLD.room AND "floor" = OLD.floor;
+        UPDATE Updates SET "date" = OLD."date" wHERE room = OLD.room AND "floor" = OLD.floor;
+        -- Tianle
     $$ LANGUAGE sql;
 
 -- add_employee
@@ -291,27 +288,19 @@ $$ LANGUAGE sql;
     END;
     $$ LANGUAGE sql;
 
-
 ------------------------------------------------------------------------
 -- CORE (Readapt as necessary.)
 ------------------------------------------------------------------------
-
-CREATE OR REPLACE FUNCTION search_room
-(<param> <type>, <param> <type>, ...)
-RETURNS <type> AS $$
-DECLARE
-    -- variables here
-BEGIN
-    -- Tianle
-END
-$$ LANGUAGE plpgsql;
-
--- is_valid_eid
-    CREATE OR REPLACE FUNCTION is_valid_eid(IN eid INT)
-    RETURNS BOOLEAN AS $$
-    -- code here
+-- search_room
+    CREATE OR REPLACE FUNCTION search_room
+    (<param> <type>, <param> <type>, ...)
+    RETURNS <type> AS $$
+    DECLARE
+        -- variables here
+    BEGIN
+        -- Tianle
+    END
     $$ LANGUAGE plpgsql;
-
 
 -- book_room
     CREATE OR REPLACE PROCEDURE book_room
@@ -338,7 +327,6 @@ $$ LANGUAGE plpgsql;
         END IF;
     END;
     $$ LANGUAGE plpgsql;
-
 
 -- unbook_room
     CREATE OR REPLACE PROCEDURE unbook_room
@@ -424,7 +412,6 @@ $$ LANGUAGE plpgsql;
     END
     $$ LANGUAGE plpgsql;
 
-
 -- approve_meeting
     CREATE OR REPLACE PROCEDURE approve_meeting
     (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT) AS $$
@@ -453,7 +440,6 @@ $$ LANGUAGE plpgsql;
         END IF;
     END;
     $$ LANGUAGE plpgsql;
-
 
 ------------------------------------------------------------------------
 -- HEALTH (Readapt as necessary.)
@@ -527,7 +513,6 @@ $$ LANGUAGE plpgsql;
         WHERE in_end - in_start + 1 - COALESCE(D.counts,0) > 0;
     $$ LANGUAGE sql;
 
-
 -- view_booking_report
     CREATE OR REPLACE FUNCTION view_booking_report
     (IN in_start_date DATE, IN in_eid INT)
@@ -571,6 +556,18 @@ $$ LANGUAGE plpgsql;
 ------------------------------------------------------------------------
 -- TRIGGERS
 ------------------------------------------------------------------------
+-- Departments
+    CREATE OR REPLACE FUNCTION core_departments() RETURNS TRIGGER AS $$
+    BEGIN
+        RAISE NOTICE 'Some users are trying to delete or update the core departments';
+        RETURN NULL;
+    END;
+    $$ LANGUAGE sql;
+
+    CREATE OR REPLACE TRIGGER check_core
+    BEFORE DELETE OR UPDATE ON Departments
+    FOR EACH ROW WHERE OLD.did IN (1,2,4,5,9) EXECUTE FUNCTION core_departments();
+
 -- Sessions
     CREATE OR REPLACE FUNCTION fever_cannot_book()
     RETURNS TRIGGER AS $$
@@ -669,5 +666,3 @@ $$ LANGUAGE plpgsql;
     CREATE TRIGGER TR_Joins_BeforeInsert
     BEFORE INSERT ON Joins
     FOR EACH ROW EXECUTE FUNCTION capacity_and_fever_check();
-
-

@@ -75,18 +75,15 @@ CREATE TABLE Juniors (
     eid     INT     PRIMARY KEY REFERENCES Employees(eid)
 );
 
-
 CREATE TABLE Bookers (
     -- Simon
     eid     INT     PRIMARY KEY REFERENCES Employees(eid)
 );
 
-
 CREATE TABLE Seniors (
     -- Simon
     eid     INT     PRIMARY KEY REFERENCES Bookers(eid)
 );
-
 
 CREATE TABLE Managers (
     -- Simon
@@ -131,7 +128,6 @@ CREATE TABLE Joins (
     FOREIGN KEY ("time", "date", room, "floor") REFERENCES Sessions("time", "date", room, "floor")
 );
 
-
 CREATE TABLE Updates (
     -- Simon
     eid         INT     REFERENCES Managers(eid),
@@ -142,4 +138,3 @@ CREATE TABLE Updates (
     PRIMARY KEY (eid, "date", "floor", room),
     FOREIGN KEY ("floor", room) REFERENCES MeetingRooms("floor", room)
 );
-
