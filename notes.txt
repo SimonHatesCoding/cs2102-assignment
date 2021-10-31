@@ -2,22 +2,33 @@
 - List of booker_ids and aprover_ids
 ------------------------------------
 
-DID 1
-Seniors: 4 5 52 53 152 153
-Managers: 8 9
+(0/1/2/3)01-10 Seniors
+(0/1/2/3)11-20 Managers
 
-DID 2
-Seniors: 7 54 101
-Managers: 108
+eid 1  2  3  ... 8 9  10
+did 2  3  4  ... 9 10 1
 
-DID 3
-Seniors: 55 102 103 104
-Managers: 6 10 56 60
+resigned:
+10
+11
 
-DID 4
-Seniors: 2 3 51
-Managers: 59 106 109
+103
+107
+113
+115
+116
+118
 
-DID 5
-Seniors: 1 105 151
-Managers: 57 58 107 110
+208
+209
+210
+211
+213
+217
+220
+
+306
+310
+312
+317
+318

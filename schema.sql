@@ -24,12 +24,11 @@ DROP TABLE IF EXISTS
 Departments,
 Employees,
 HealthDeclarations,
-Contacts,
 Juniors,
 Bookers,
 Seniors,
 Managers,
-"Sessions",
+Sessions,
 MeetingRooms,
 
 -- RELATIONS (Insert/Delete table names here)
@@ -59,7 +58,8 @@ CREATE TABLE Employees (
     ename           VARCHAR(50),
     email           VARCHAR(50),
     resigned_date   DATE,
-    did             INT             REFERENCES Departments(did)
+    did             INT             REFERENCES Departments(did),
+    contact         VARCHAR
 );
 
 CREATE TABLE HealthDeclarations (
@@ -68,12 +68,6 @@ CREATE TABLE HealthDeclarations (
     "date"      DATE,
     temperature float   NOT NULL,
     PRIMARY KEY ("date", eid)
-);
-
-CREATE TABLE Contacts (
-    contact_number  VARCHAR(50),
-    eid             INT             REFERENCES Employees(eid),
-    PRIMARY KEY (eid, contact_number)
 );
 
 CREATE TABLE Juniors (
@@ -108,7 +102,7 @@ CREATE TABLE MeetingRooms (
     FOREIGN KEY (did) REFERENCES Departments(did)
 );
 
-CREATE TABLE "Sessions" (
+CREATE TABLE Sessions (
     -- Petrick
     "time"          TIME,
     "date"          DATE,
@@ -116,8 +110,9 @@ CREATE TABLE "Sessions" (
     "floor"         INT,
     booker_id       INT     NOT NULL,
     approver_id     INT,
-    PRIMARY KEY ("time", "date", room, "floor", approver_id),
+    PRIMARY KEY ("time", "date", room, "floor"),
     FOREIGN KEY (booker_id) REFERENCES Bookers(eid),
+    FOREIGN KEY (approver_id) REFERENCES Managers(eid),
     FOREIGN KEY (room, "floor") REFERENCES MeetingRooms(room, "floor") ON DELETE CASCADE
 );
 
@@ -133,17 +128,18 @@ CREATE TABLE Joins (
     room    INT,
     "floor" INT,
     PRIMARY KEY (eid, "time", "date", room, "floor"),
-    FOREIGN KEY (room, "floor") REFERENCES MeetingRooms(room, "floor")
+    FOREIGN KEY ("time", "date", room, "floor") REFERENCES Sessions("time", "date", room, "floor")
 );
 
 
 CREATE TABLE Updates (
     -- Simon
-    eid     INT     REFERENCES Managers(eid),
-    "date"  DATE,
-    "floor" INT,
-    room    INT,
-    cap     INT,
+    eid         INT     REFERENCES Managers(eid),
+    "date"      DATE DEFAULT DATE('2020-10-01'),
+    "floor"     INT,
+    room        INT,
+    capacity    INT     NOT NULL,
+    PRIMARY KEY (eid, "date", "floor", room),
     FOREIGN KEY ("floor", room) REFERENCES MeetingRooms("floor", room)
 );
 
