@@ -457,14 +457,11 @@ $$ LANGUAGE plpgsql;
     FIND CLOSE CONTACT
     REMOVE THEM FROM D+7 BUT ONLY THE ONES IN THE FUTURE
     */
-        -- use the latest health declaration
-        SELECT temperature INTO temp
-        FROM HealthDeclarations
-        WHERE eid = eid
-        ORDER BY "date" DESC
-        LIMIT 1;
+        SELECT temperature INTO temp FROM HealthDeclarations HD 
+        WHERE HD.eid = in_eid AND HD.eid = CURRENT_DATE;
 
-        raise notice 'Value: %', temp;
+
+
     END;
     $$ LANGUAGE plpgsql;
 
@@ -575,6 +572,7 @@ $$ LANGUAGE plpgsql;
     DECLARE
         capacity INT;
         joined INT;
+        approver_id INT;
     BEGIN
         IF has_fever(NEW.eid) THEN RETURN NULL;
         END IF;
@@ -597,6 +595,17 @@ $$ LANGUAGE plpgsql;
               J.floor = NEW.floor
         
         IF joined = capacity THEN RETURN NULL;
+        END IF;
+
+        -- cannot joined approved session
+        SELECT S.approver_id INTO approver_id
+        FROM "Sessions" S
+        WHERE S.room = NEW.room AND
+              S.floor = NEW.floor AND
+              S.date = NEW.date AND
+              S.time = NEW.time;
+        
+        IF approver_id IS NOT NULL THEN RETURN NULL;
         END IF;
 
         RETURN NEW;
