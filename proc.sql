@@ -453,7 +453,6 @@ $$ LANGUAGE plpgsql;
         temp INT;
     BEGIN
     /*
-    FIND CLOSE CONTACT
     REMOVE THEM FROM D+7 BUT ONLY THE ONES IN THE FUTURE
     */
         SELECT temperature INTO temp FROM HealthDeclarations HD 
@@ -478,6 +477,10 @@ $$ LANGUAGE plpgsql;
         FROM AffectedSessions S
         LEFT JOIN Joins J
         ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
+
+        -- remove from D to D+7
+        DELETE FROM Joins J
+        WHERE J.date BETWEEN D AND D + interval '7 days' AND J.date AFTER CURRENT_DATE AND J.eid IN close_contacts_eid;
 
     END;
     $$ LANGUAGE plpgsql;
