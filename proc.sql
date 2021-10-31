@@ -507,31 +507,43 @@ $$ LANGUAGE sql;
 
 
 CREATE OR REPLACE FUNCTION view_booking_report
- (IN in_date DATE, IN eid INT)
+ (IN in_start_date DATE, IN in_eid INT)
 RETURNS SETOF RECORD AS $$
-    SELECT 
-$$ LANGUAGE plpgsql;
+    --Petrick
+    SELECT "floor", room, "date", "time", 
+    CASE 
+        WHEN approver_id IS NOT NULL THEN TRUE
+        ELSE FALSE
+    END AS is_approved
+    FROM Sessions
+    WHERE "date" > in_start_date AND booker_id = in_eid
+    ORDER BY "date" ASC, "time" ASC
+$$ LANGUAGE sql;
 
 
 CREATE OR REPLACE FUNCTION view_future_meeting
- (IN in_date DATE, IN eid INT)
-RETURNS  SETOF RECORD  AS $$
-    SELECT *
-    FROM Sessions
-    WHERE 
+ (IN in_start_date DATE, IN in_eid INT)
+RETURNS SETOF RECORD AS $$
+    --Petrick
+    SELECT "floor", room, "date", "time", 
+    FROM Joins
+    WHERE "date" > in_start_date AND eid = in_eid
+    ORDER BY "date" ASC, "time" ASC
 END
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE sql;
 
 
 CREATE OR REPLACE FUNCTION view_manager_report
- (IN in_date DATE, IN eid INT)
-RETURNS <type> AS $$
-DECLARE
-    -- variables here
-BEGIN
-    -- Petrick
-END
-$$ LANGUAGE plpgsql;
+ (IN in_start_date DATE, IN in_eid INT)
+RETURNS SETOF RECORD AS $$
+    --Petrick
+    SELECT S."floor", S.room, S."date", S."time", S.booker_id
+    FROM Sessions S, MeetingRooms R, Managers M, Employees E
+    WHERE in_eid in (SELECT eid FROM M)
+    AND "date" > in_start_date
+    AND (SELECT did FROM E WHERE eid = in_eid) = (SELECT did FROM R WHERE S."floor" = R."floor" AND S."room" = R."room")
+    ORDER BY "date" ASC, "time" ASC
+$$ LANGUAGE sql;
 
 
 -- TRIGGERS
