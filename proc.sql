@@ -96,7 +96,8 @@ DECLARE
 BEGIN
     eid := generate_id();   
     SELECT concat(ename, eid, '@hotmail.com') INTO email;
-    INSERT INTO Employees (eid, ename, email, did, contact) VALUES (eid, in_ename, email, in_did, in_contact);
+    INSERT INTO Employees (eid, ename, email, did, contact) 
+    VALUES (eid, in_ename, email, in_did, in_contact);
     IF kind = 'junior' THEN INSERT INTO Juniors VALUES (eid);
     ELSIF kind = 'senior' THEN 
         INSERT INTO Bookers VALUES (eid);
@@ -192,38 +193,26 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
+
 CREATE OR REPLACE PROCEDURE join_meeting
  (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
 AS $$
   -- Teddy
-  -- all or nothing?
 DECLARE
     temp INT;
     curr_start TIME := in_start;
 BEGIN
-  -- cannot join if got fever
-    SELECT temperature INTO temp
-    FROM HealthDeclarations HD
-    WHERE HD.eid = in_eid
-    ORDER BY "date" DESC
-    LIMIT 1;
-
-    IF temp NOT NULL AND temp > 37.5 THEN RETURN;
-    END IF;
-
   -- check that sessions from in_start to in_end exist
-    IF NOT is_start_end_valid(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
-    END IF;
-
+    IF NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
   -- find the sessions and check whether it's approved
-    IF is_start_end_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
+    ELSIF any_session_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
     END IF;
 
   -- if everything is valid,
     curr_start := in_start;
     WHILE curr_start < in_end
-        INSERT INTO Joins (eid, "time", "date", room, "floor") VALUES (in_eid, curr_start, in_date, in_room, in_floor) 
-        ON CONFLICT (eid, "time", "date", room, "floor") DO NOTHING;
+        INSERT INTO Joins (eid, "time", "date", room, "floor")
+        VALUES (in_eid, curr_start, in_date, in_room, in_floor);
 
         curr_start := curr_start + interval '1 hour';
     END LOOP;
@@ -236,16 +225,11 @@ CREATE OR REPLACE FUNCTION leave_meeting
  (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
 RETURNS <type> AS $$
     -- Teddy
-DECLARE
-    -- variables here
-    curr_start TIME := in_start;
-BEGIN
+BEGIN 
   -- check that sessions from in_start to in_end exist
-    IF NOT is_start_end_valid(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
-    END IF;
-
+    IF NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
   -- find the sessions and check whether it's approved
-    IF is_start_end_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
+    ELSIF any_session_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
     END IF;
 
   -- delete the eid from the joins
@@ -302,28 +286,7 @@ $$ LANGUAGE sql;
 
 CALL declare_health(1, '2021-10-19', 37.0);
 
-CREATE OR REPLACE FUNCTION check_fever()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- no fever
-    IF NEW.temperature <= 37.5 THEN RETURN NULL;
-    END IF;
 
-    -- if the employee is the booker -> cancel future sessions
-    IF NEW.eid IN (SELECT * FROM Bookers) THEN
-        DELETE FROM "Sessions" WHERE booker_id = NEW.eid AND "date" >= NEW.date;
-    END IF;
-
-    -- remove employee from future sessions
-    DELETE FROM Joins WHERE eid = NEW.eid AND "date" >= NEW.date;
-
-    -- call contact tracing
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER TR_HealthDeclarations_AfterInsert
-AFTER INSERT OR UPDATE ON HealthDeclarations
-FOR EACH ROW EXECUTE FUNCTION check_fever();
 
 
 CREATE OR REPLACE FUNCTION contact_tracing
@@ -398,7 +361,59 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
--- Helpers functions
+
+-- Triggers
+  -- Sessions
+    CREATE OR REPLACE FUNCTION fever_cannot_book()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        IF has_fever(NEW.booker_id) THEN RETURN NULL;
+        ELSE RETURN NEW;
+    END
+    $$ LANGUAGE plpgsql;
+
+    CREATE TRIGGER TR_Sessions_BeforeInsert
+    BEFORE INSERT ON "Sessions"
+    FOR EACH ROW EXECUTE FUNCTION fever_cannot_book();
+
+  -- HealthDeclarations
+    CREATE OR REPLACE FUNCTION check_fever()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        -- no fever
+        IF NEW.temperature <= 37.5 THEN RETURN NULL;
+        END IF;
+
+        -- if the employee is the booker -> cancel future sessions
+        IF NEW.eid IN (SELECT * FROM Bookers) THEN
+            DELETE FROM "Sessions" WHERE booker_id = NEW.eid AND "date" >= NEW.date;
+        END IF;
+
+        -- remove employee from future sessions
+        DELETE FROM Joins WHERE eid = NEW.eid AND "date" >= NEW.date;
+
+        -- call contact tracing
+    END;
+    $$ LANGUAGE plpgsql;
+
+    CREATE TRIGGER TR_HealthDeclarations_AfterInsert
+    AFTER INSERT OR UPDATE ON HealthDeclarations
+    FOR EACH ROW EXECUTE FUNCTION check_fever();
+
+  -- Joins
+    CREATE OR REPLACE FUNCTION fever_cannot_join()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        IF has_fever(NEW.eid) THEN RETURN NULL;
+        ELSE RETURN NEW;
+    END
+    $$ LANGUAGE plpgsql;
+
+    CREATE TRIGGER TR_Joins_BeforeInsert
+    BEFORE INSERT ON Joins
+    FOR EACH ROW EXECUTE FUNCTION fever_cannot_join();
+
+-- Helper functions
 
     CREATE OR REPLACE FUNCTION all_sessions_exist
     (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
