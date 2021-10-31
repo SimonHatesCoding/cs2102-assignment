@@ -573,14 +573,41 @@ $$ LANGUAGE plpgsql;
     FOR EACH ROW EXECUTE FUNCTION check_fever();
 
   -- Joins
-    CREATE OR REPLACE FUNCTION fever_cannot_join()
+    CREATE OR REPLACE PROCEDURE capacity_and_fever_check()
     RETURNS TRIGGER AS $$
+    DECLARE
+        capacity INT;
+        joined INT;
     BEGIN
         IF has_fever(NEW.eid) THEN RETURN NULL;
-        ELSE RETURN NEW;
+        END IF;
+
+        -- find out the capacity of the room for that day
+        SELECT U.capacity INTO capacity
+        FROM Updates U
+        WHERE U.room = NEW.room AND
+              U.floor = NEW.floor AND
+              U.date <= NEW.date
+        ORDER BY U.date DESC
+        LIMIT 1
+
+        -- find out how many employees have already joined
+        SELECT COUNT(*) INTO joined
+        FROM Joins J
+        WHERE J.time = NEW.time AND
+              J.date = NEW.date AND
+              J.room = NEW.room AND
+              J.floor = NEW.floor
+        
+        IF joined = capacity THEN RETURN NULL;
+        END IF;
+
+        RETURN NEW;
     END
-    $$ LANGUAGE plpgsql;
+
 
     CREATE TRIGGER TR_Joins_BeforeInsert
     BEFORE INSERT ON Joins
-    FOR EACH ROW EXECUTE FUNCTION fever_cannot_join();
+    FOR EACH ROW EXECUTE FUNCTION capacity_and_fever_check();
+
+

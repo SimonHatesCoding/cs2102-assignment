@@ -134,10 +134,12 @@ CREATE TABLE Joins (
 
 CREATE TABLE Updates (
     -- Simon
-    eid     INT     REFERENCES Managers(eid),
-    "date"  DATE,
-    "floor" INT,
-    room    INT,
+    eid         INT     REFERENCES Managers(eid),
+    "date"      DATE,
+    "floor"     INT,
+    room        INT,
+    capacity    INT     NOT NULL,
+    PRIMARY KEY (eid, "date", "floor", room)
     FOREIGN KEY ("floor", room) REFERENCES MeetingRooms("floor", room)
 );
 
