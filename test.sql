@@ -153,42 +153,92 @@
 -- END
 -- $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION is_valid_hour(IN start_hour INT, IN end_hour INT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    IF (end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR (end_hour NOT BETWEEN 1 AND 24) THEN RETURN FALSE;
-    ELSE RETURN TRUE;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
+-- CREATE OR REPLACE FUNCTION is_valid_hour(IN start_hour INT, IN end_hour INT)
+-- RETURNS BOOLEAN AS $$
+-- BEGIN
+--     IF (end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR (end_hour NOT BETWEEN 1 AND 24) THEN RETURN FALSE;
+--     ELSE RETURN TRUE;
+--     END IF;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION is_past(IN in_date DATE, in_hour INT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    IF (in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND in_hour < date_part('hour', current_timestamp)) THEN RETURN TRUE;
-    ELSE RETURN FALSE;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
+-- CREATE OR REPLACE FUNCTION is_past(IN in_date DATE, in_hour INT)
+-- RETURNS BOOLEAN AS $$
+-- BEGIN
+--     IF (in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND in_hour < date_part('hour', current_timestamp)) THEN RETURN TRUE;
+--     ELSE RETURN FALSE;
+--     END IF;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION is_valid_room(IN in_floor INT, IN in_room INT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    IF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN RETURN FALSE;
-    ELSE RETURN TRUE;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
+-- CREATE OR REPLACE FUNCTION is_valid_room(IN in_floor INT, IN in_room INT)
+-- RETURNS BOOLEAN AS $$
+-- BEGIN
+--     IF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN RETURN FALSE;
+--     ELSE RETURN TRUE;
+--     END IF;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION hour_int_to_time(IN in_hour INT)
-RETURNS TIME AS $$
-BEGIN
-    IF in_hour >= 10 THEN RETURN CAST(CONCAT(CAST(in_hour AS TEXT), ':00') AS TIME);
-    ELSE RETURN CAST(CONCAT('0', CAST(in_hour AS TEXT), ':00') AS TIME);
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
+-- CREATE OR REPLACE FUNCTION hour_int_to_time(IN in_hour INT)
+-- RETURNS TIME AS $$
+-- BEGIN
+--     IF in_hour >= 10 THEN RETURN CAST(CONCAT(CAST(in_hour AS TEXT), ':00') AS TIME);
+--     ELSE RETURN CAST(CONCAT('0', CAST(in_hour AS TEXT), ':00') AS TIME);
+--     END IF;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
+
+-- CREATE OR REPLACE PROCEDURE add_department (IN did INT, IN dname VARCHAR(50)) 
+-- AS $$
+--     INSERT INTO Departments (did, dname) VALUES (did, dname);
+-- $$ LANGUAGE sql;
+
+-- CALL add_department(6, 'Safety');
+
+
+-- CREATE OR REPLACE PROCEDURE remove_department(IN in_did INT， IN in_transfer_did INT)
+--  -- CANNOT DELETE 1,2,4,5,9; Operations will be transffered into HR; R&D is transffered into IT. 
+--  -- The rest of departments cannot be deleted. Raise exception if attempts are made.
+-- AS $$
+--     IF in_did IN (6,7,8) THEN
+--         DELETE FROM Employees WHERE in_did = .did;
+--     ELSIF in_did = 3 THEN
+--         UPDATE Employees SET did = 4 WHERE did = 3;
+--     ELSIF in_did = 10 THEN
+--         UPDATE Employees SET did = 5 WHERE did = 10;
+--     END IF;
+--     DELETE FROM Departments WHERE did = in_did;
+-- $$ LANGUAGE plpgsql;
+
+-- CREATE OR REPLACE FUNCTION core_departments() RETURNS TRIGGER AS $$
+-- BEGIN
+--     RAISE EXCEPTION 'Some users are trying to delete or update the core departments';
+--     RETURN NULL;
+-- END;
+-- $$ LANGUAGE sql;
+
+-- CREATE OR REPLACE TRIGGER check_core
+-- BEFORE DELETE OR UPDATE ON Departments
+-- FOR EACH ROW WHERE OLD.did IN (1,2,4,5,9) EXECUTE FUNCTION core_departments();
+
+
+-- CREATE OR REPLACE PROCEDURE add_room
+--  (IN room INT, IN "floor" INT, IN rname VARCHAR(50), IN did INT)
+-- AS $$
+--     -- Tianle
+--     INSERT INTO MeetingRooms VALUES (room, "floor", rname, did);
+-- $$ LANGUAGE sql;
+
+-- CREATE OR REPLACE PROCEDURE change_capacity
+-- (IN room INT, IN "floor" INT, IN capacity INT, IN DATE )
+-- AS $$
+--     UPDATE Updates SET cap = capacity wHERE room = OLD.room AND "floor" = OLD.floor;
+--     UPDATE Updates SET "date" = OLD."date" wHERE room = OLD.room AND "floor" = OLD.floor;
+--     -- Tianle
+-- $$ LANGUAGE sql;
+-- -- Check whether the manager changes the cap
 
 SELECT is_valid_hour(1,24);
 SELECT is_valid_hour(10,6);
@@ -202,3 +252,4 @@ SELECT is_valid_room(10,20);
 
 SELECT hour_int_to_time(12);
 SELECT hour_int_to_time(3);
+
