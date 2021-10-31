@@ -1,51 +1,3 @@
-------------------------------------------------------------------------
-------------------------------------------------------------------------
---
--- PROCEDURES
---
-------------------------------------------------------------------------
-------------------------------------------------------------------------
-
-
-------------------------------------------------------------------------
--- GENERIC TEMPLATE (adapted from L07 PLpgSQL):
-------------------------------------------------------------------------
--- CREATE OR REPLACE FUNCTION <name>
---  (<param> <type>, <param> <type>, ...)
--- RETURNS <type> AS $$
--- DECLARE
---  <variable>
---  <variable>
--- BEGIN
---  <code>
--- END
--- $$ LANGUAGE <sql OR plpgsql>;
-
--- CREATE OR REPLACE PROCEDURE <name>
---  (<param> <type>, <param> <type>, ...)
--- AS $$
---
---
--- <code>
---
---
--- $$ LANGUAGE <sql OR plpgsql>;
-
--- IF <condition> THEN <action>
--- ELSEIF <condition> THEN <action>
--- ...
--- ELSE <action>
--- END IF;
-
--- WHILE <condition> LOOP    
---  EXIT WHEN <condition>
---  <action>
--- END LOOP;
-
--- FOREACH <variable> IN ARRAY <iterable> LOOP
---  <action>
--- END LOOP;
-------------------------------------------------------------------------
 
 -- HELPERS
   -- all_sessions_exist
@@ -490,19 +442,19 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION non_compliance
- (IN "start" DATE, IN "end" DATE, OUT eid INT, OUT "days" INT)
+ (IN in_start DATE, IN in_end DATE, OUT eid INT, OUT "days" INT)
 RETURNS  SETOF RECORD  AS $$
 -- teddy
     WITH Declared AS (
         SELECT eid, COUNT(temperature) AS counts
-        FROM HealthDeclarations
-        WHERE "date" BETWEEN "start" AND "end"
+        FROM HealthDeclarations HD
+        WHERE HD.date BETWEEN in_start AND in_end
         GROUP BY eid
     )
-    SELECT E.eid AS eid, "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) AS "days"
+    SELECT E.eid AS eid, in_end - in_start + 1 - COALESCE(D.counts,0) AS "days"
     FROM Employees E
     LEFT JOIN Declared D ON E.eid = D.eid
-    WHERE "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) > 0;
+    WHERE in_end - in_start + 1 - COALESCE(D.counts,0) > 0;
 $$ LANGUAGE sql;
 
 
@@ -616,7 +568,6 @@ $$ LANGUAGE sql;
 
         RETURN NEW;
     END
-
 
     CREATE TRIGGER TR_Joins_BeforeInsert
     BEFORE INSERT ON Joins
