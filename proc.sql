@@ -264,7 +264,6 @@ $$ LANGUAGE plpgsql;
     $$ LANGUAGE plpgsql;
 
 
--- TODO: make a hour function
 -- book_room
     CREATE OR REPLACE PROCEDURE book_room
     (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT) AS $$
@@ -295,7 +294,6 @@ $$ LANGUAGE plpgsql;
         END IF;
     END
     $$ LANGUAGE plpgsql;
-
 
 
 -- unbook_room
