@@ -198,26 +198,49 @@
 ------------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE add_department
-(<param> <type>, <param> <type>, ...)
+(IN did INT, IN dname VARCHAR(50)) 
 AS $$
     -- Tianle
+    INSERT INTO Departments VALUES (did, dname);
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE PROCEDURE remove_department
-(<param> <type>, <param> <type>, ...)
+(IN did INT)
 AS $$
     -- Tianle
+    DELETE FROM Departments WHERE did = OLD.did;
+    IF did IN (6, 7, 8) THEN
+    DELETE FROM Employees WHERE did = OLD.did;
+    ELSIF did = 3 THEN
+    UPDATE Employees SET OLD.did = 4 WHERE OLD.did = 4;
+    ELSIF did = 10 THEN
+    UPDATE Employees SET OLD.did = 5 WHERE OLD.did = 5;
 $$ LANGUAGE sql;
 
+CREATE OR REPLACE FUNCTION core_departments() RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Some users are trying to delete or update the core departments';
+    RETURN NULL;
+END;
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE TRIGGER check_core
+BEFORE DELETE OR UPDATE ON Departments
+FOR EACH ROW WHERE OLD.did IN (1,2,4,5,9) EXECUTE FUNCTION core_departments();
+
 CREATE OR REPLACE PROCEDURE add_room
-(<param> <type>, <param> <type>, ...)
-AS $$
+ (IN room INT, IN "floor" INT, IN rname VARCHAR(50), IN did INT)
+RETURN void AS $$
+
     -- Tianle
+    INSERT INTO MeetingRooms VALUES (room, "floor", rname, did);
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE PROCEDURE change_capacity
-(<param> <type>, <param> <type>, ...)
+(IN room INT, IN "floor" INT, IN capacity INT, IN DATE )
 AS $$
+    UPDATE Updates SET cap = capacity wHERE room = OLD.room AND "floor" = OLD.floor;
+    UPDATE Updates SET "date" = OLD."date" wHERE room = OLD.room AND "floor" = OLD.floor;
     -- Tianle
 $$ LANGUAGE sql;
 
