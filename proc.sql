@@ -166,46 +166,49 @@
     END
     $$ LANGUAGE plpgsql;
 
+  --is_valid_hour
+    CREATE OR REPLACE FUNCTION is_valid_hour(IN start_hour INT, IN end_hour INT)
+    RETURNS BOOLEAN AS $$
+    BEGIN
+        IF (end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR (end_hour NOT BETWEEN 1 AND 24) THEN RETURN FALSE;
+        ELSE RETURN TRUE;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+
+  --is_past
+    CREATE OR REPLACE FUNCTION is_past(IN in_date DATE, in_hour INT)
+    RETURNS BOOLEAN AS $$
+    BEGIN
+        IF (in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND in_hour < date_part('hour', current_timestamp)) THEN RETURN TRUE;
+        ELSE RETURN FALSE;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+
+  --is_valid_room
+    CREATE OR REPLACE FUNCTION is_valid_room(IN in_floor INT, IN in_room INT)
+    RETURNS BOOLEAN AS $$
+    BEGIN
+        IF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN RETURN FALSE;
+        ELSE RETURN TRUE;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+
+  --hour_int_to_time
+    CREATE OR REPLACE FUNCTION hour_int_to_time(IN in_hour INT)
+    RETURNS TIME AS $$
+    BEGIN
+        IF in_hour >= 10 THEN RETURN CAST(CONCAT(CAST(in_hour AS TEXT), ':00') AS TIME);
+        ELSE RETURN CAST(CONCAT('0', CAST(in_hour AS TEXT), ':00') AS TIME);
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
 
 ------------------------------------------------------------------------
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
-
-CREATE OR REPLACE FUNCTION is_valid_hour(IN start_hour INT, IN end_hour INT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    IF (end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR (end_hour NOT BETWEEN 1 AND 24) THEN RETURN FALSE;
-    ELSE RETURN TRUE;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION is_past(IN in_date DATE, in_hour INT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    IF (in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND in_hour < date_part('hour', current_timestamp)) THEN RETURN TRUE;
-    ELSE RETURN FALSE;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION is_valid_room(IN in_floor INT, IN in_room INT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    IF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN RETURN FALSE;
-    ELSE RETURN TRUE;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION hour_int_to_time(IN in_hour INT)
-RETURNS TIME AS $$
-BEGIN
-    IF in_hour >= 10 THEN RETURN CAST(CONCAT(CAST(in_hour AS TEXT), ':00') AS TIME);
-    ELSE RETURN CAST(CONCAT('0', CAST(in_hour AS TEXT), ':00') AS TIME);
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
 
 
 
@@ -315,13 +318,11 @@ DECLARE
     t TIME;
 BEGIN
     -- Simon
-    SELECT temperature INTO e_temperature FROM HealthDeclarations WHERE eid = in_eid AND date = CURRENT_DATE; -- change check fever with the helper fn
     IF in_eid NOT IN (SELECT eid FROM Bookers) THEN RAISE EXCEPTION 'Employee % is not authorized to make bookings', in_eid;
-    ELSIF e_temperature IS NOT NULL AND e_temperature > 37.5 THEN RAISE EXCEPTION 'Employee % is having a fever (%C)', in_eid, e_temperature;
-    -- if NOT is_valid_room(floor_num, in_room)
-    ELSIF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN RAISE EXCEPTION '%-% is not found', in_floor, in_room;
-    ELSIF ((end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR (end_hour NOT BETWEEN 1 AND 24)) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
-    ELSIF ((in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND start_hour < date_part('hour', current_timestamp))) THEN RAISE EXCEPTION 'Not allowed to make a booking in the past: %, %', in_date, start_hour;
+    ELSIF NOT is_valid_room(in_floor, in_room) THEN RAISE EXCEPTION '%-% is not found', in_floor, in_room;
+    ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
+    ELSIF is_past(in_date, start_hour) THEN RAISE EXCEPTION 'Not allowed to make a booking in the past: %, %', in_date, start_hour;
+    ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RAISE EXCEPTION 'Some session(s) are already booked and approved for your specified period and room';
 
     ELSE FOR h IN start_hour..end_hour-1 LOOP -- all or nothing
         IF h >= 10 THEN t := CAST(CONCAT(CAST(h AS TEXT), ':00') AS TIME);
@@ -346,17 +347,18 @@ DECLARE
     r RECORD;
 BEGIN
     -- Simon
-    FOR h IN start_hour..end_hour-1 LOOP
-        IF ((end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR end_hour NOT BETWEEN 1 AND 24) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
-        ELSIF ((in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND start_hour < date_part('hour', current_timestamp))) THEN RAISE EXCEPTION 'Not allowed to remove a booking in the past: %, %', dt, start_hour;
-        END IF;
+    IF NOT is_valid_hour(start_hour, end_hour) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
+    ELSIF is_past(in_date, start_hour) THEN RAISE EXCEPTION 'Not allowed to remove a booking in the past: %, %', in_date, start_hour;
+    ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, start_hour, end_hour) THEN RAISE EXCEPTION 'Some session(s) in the query are not present in Sessions';
 
+    ELSE FOR h IN start_hour..end_hour-1 LOOP
         SELECT * INTO r FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
         CONTINUE WHEN r IS NULL;
-
         DELETE FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
         DELETE FROM Joins WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
     END LOOP;
+
+    END IF;
 END
 $$ LANGUAGE plpgsql;
 
@@ -422,8 +424,9 @@ BEGIN
     -- Simon
     -- Check if the meeting is alr approved
     IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
-    ELSIF ((end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR end_hour NOT BETWEEN 1 AND 24) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
-    ELSIF ((in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND start_hour < date_part('hour', current_timestamp))) THEN RAISE EXCEPTION 'Not allowed to remove a booking in the past: %, %', in_date, start_hour;
+    ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
+    ELSIF is_past(in_date, start_hour) THEN RAISE EXCEPTION 'Not allowed to remove a booking in the past: %, %', in_date, start_hour;
+    ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RAISE EXCEPTION 'Some sessions are already approved by other manager(s)';
 
     ELSE FOR h in start_hour..end_hour-1 LOOP
         SELECT did INTO dpmt_b FROM Employees WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
