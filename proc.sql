@@ -192,117 +192,6 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION all_sessions_exist
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
-RETURNS BOOLEAN AS $$
-  -- Teddy
-DECLARE
-    found_sessions INT;
-    wanted_sessions INT;
-BEGIN
-    SELECT COUNT(*) INTO found_sessions
-    FROM "Sessions"
-    WHERE "date" = in_date AND
-          room = in_room AND
-          "floor" = in_floor AND
-          "time" BETWEEN in_start AND (in_end - interval '1 min');
-    
-    SELECT EXTRACT(epoch FROM in_end - in_time)/3600 INTO wanted_sessions;
-
-    -- trying to join sessions that have not been booked
-    RETURN found_sessions == wanted_sessions;
-END
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION any_session_exist
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
-RETURNS BOOLEAN AS $$
-  -- Teddy
-DECLARE
-    found_sessions INT;
-BEGIN
-    SELECT COUNT(*) INTO found_sessions
-    FROM "Sessions"
-    WHERE "date" = in_date AND
-          room = in_room AND
-          "floor" = in_floor AND
-          "time" BETWEEN in_start AND (in_end - interval '1 min');
-    
-    -- trying to join sessions that have not been booked
-    RETURN found_sessions != 0;
-END
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION eid_in_all_sessions
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN eid INT)
-RETURNS BOOLEAN AS $$
-DECLARE
-    found_sessions INT;
-    wanted_sessions INT;
-BEGIN
-    SELECT COUNT(*) INTO found_sessions
-    FROM "Sessions" S
-    LEFT JOIN Joins J 
-    ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
-    WHERE J.date = in_date AND
-          J.room = in_room AND
-          J.floor = in_floor AND
-          J.eid = in_eid AND
-          J.time BETWEEN in_start AND (in_end - interval '1 min');
-    
-    SELECT EXTRACT(epoch FROM in_end - in_time)/3600 INTO wanted_sessions;
-
-    RETURN found_sessions = wanted_sessions;
-END
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION any_session_approved
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
-RETURNS BOOLEAN AS $$
-  -- Teddy
-DECLARE
-    approver INT;
-    curr_start TIME := in_start;
-BEGIN
-    WHILE curr_start < in_end LOOP
-        approver := NULL;
-        SELECT approver_id INTO approver
-        FROM "Sessions"
-        WHERE "time" = curr_start AND
-              "date" = in_date AND
-              room = in_room AND
-              "floor" = in_floor;
-        
-        -- cannot join approved meeting
-        IF approver IS NOT NULL THEN RETURN TRUE;
-        END IF;
-
-        curr_start := curr_start + interval '1 hour';
-    END LOOP;
-    RETURN FALSE;
-END
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION has_fever
- (IN in_eid INT, OUT fever BOOLEAN)
-RETURNS BOOLEAN AS $$
-DECLARE
-    declarations INT := 0;
-BEGIN
-    SELECT COUNT(*) INTO declarations FROM HealthDeclarations WHERE eid = in_eid;
-
-    IF declarations = 0 THEN 
-        RAISE EXCEPTION '% has never declared temperature, unable to know whether he/she has fever or not', in_eid;
-    END IF;
-    
-    SELECT CASE WHEN temperature > 37.5 THEN TRUE ELSE FALSE END INTO fever
-    FROM HealthDeclarations
-    WHERE eid = in_eid
-    ORDER BY "date" DESC
-    LIMIT 1;
-END
-$$ LANGUAGE plpgsql;
-
 CREATE OR REPLACE PROCEDURE join_meeting
  (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
 AS $$
@@ -508,3 +397,118 @@ BEGIN
     -- Petrick
 END
 $$ LANGUAGE plpgsql;
+
+-- Helpers functions
+
+    CREATE OR REPLACE FUNCTION all_sessions_exist
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
+    RETURNS BOOLEAN AS $$
+    -- Teddy
+    DECLARE
+        found_sessions INT;
+        wanted_sessions INT;
+    BEGIN
+        SELECT COUNT(*) INTO found_sessions
+        FROM "Sessions"
+        WHERE "date" = in_date AND
+            room = in_room AND
+            "floor" = in_floor AND
+            "time" BETWEEN in_start AND (in_end - interval '1 min');
+        
+        SELECT EXTRACT(epoch FROM in_end - in_time)/3600 INTO wanted_sessions;
+
+        -- trying to join sessions that have not been booked
+        RETURN found_sessions == wanted_sessions;
+    END
+    $$ LANGUAGE plpgsql;
+
+    CREATE OR REPLACE FUNCTION any_session_exist
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
+    RETURNS BOOLEAN AS $$
+    -- Teddy
+    DECLARE
+        found_sessions INT;
+    BEGIN
+        SELECT COUNT(*) INTO found_sessions
+        FROM "Sessions"
+        WHERE "date" = in_date AND
+            room = in_room AND
+            "floor" = in_floor AND
+            "time" BETWEEN in_start AND (in_end - interval '1 min');
+        
+        -- trying to join sessions that have not been booked
+        RETURN found_sessions != 0;
+    END
+    $$ LANGUAGE plpgsql;
+
+    CREATE OR REPLACE FUNCTION eid_in_all_sessions
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN eid INT)
+    RETURNS BOOLEAN AS $$
+    DECLARE
+        found_sessions INT;
+        wanted_sessions INT;
+    BEGIN
+        SELECT COUNT(*) INTO found_sessions
+        FROM "Sessions" S
+        LEFT JOIN Joins J 
+        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
+        WHERE J.date = in_date AND
+            J.room = in_room AND
+            J.floor = in_floor AND
+            J.eid = in_eid AND
+            J.time BETWEEN in_start AND (in_end - interval '1 min');
+        
+        SELECT EXTRACT(epoch FROM in_end - in_time)/3600 INTO wanted_sessions;
+
+        RETURN found_sessions = wanted_sessions;
+    END
+    $$ LANGUAGE plpgsql;
+
+    CREATE OR REPLACE FUNCTION any_session_approved
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
+    RETURNS BOOLEAN AS $$
+    -- Teddy
+    DECLARE
+        approver INT;
+        curr_start TIME := in_start;
+    BEGIN
+        WHILE curr_start < in_end LOOP
+            approver := NULL;
+            SELECT approver_id INTO approver
+            FROM "Sessions"
+            WHERE "time" = curr_start AND
+                "date" = in_date AND
+                room = in_room AND
+                "floor" = in_floor;
+            
+            -- cannot join approved meeting
+            IF approver IS NOT NULL THEN RETURN TRUE;
+            END IF;
+
+            curr_start := curr_start + interval '1 hour';
+        END LOOP;
+        RETURN FALSE;
+    END
+    $$ LANGUAGE plpgsql;
+
+    CREATE OR REPLACE FUNCTION has_fever
+    (IN in_eid INT)
+    RETURNS BOOLEAN AS $$
+    DECLARE
+        temp INT;
+    BEGIN
+
+        SELECT temperature INTO temp FROM HealthDeclarations HD 
+        WHERE HD.eid = in_eid AND HD.eid = CURRENT_DATE;
+
+        IF temp IS NULL THEN
+            RAISE NOTICE '% has not declared temperature today, unable to decide whether employee has a fever. 
+            Taking a safer approach, employee is assumed to potentially have a fever until the employee declares otherwise', in_eid;
+            RETURNS TRUE; 
+        ELSIF temp > 37.5 THEN
+            RETURNS TRUE;
+        ELSE
+            RETURNS FALSE;
+        END IF;
+    END
+    $$ LANGUAGE plpgsql;
