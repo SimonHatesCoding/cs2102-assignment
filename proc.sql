@@ -112,9 +112,19 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE remove_employee
- (<param> <type>, <param> <type>, ...)
+ (IN in_eid INT, IN in_date DATE)
 AS $$
-    -- Petrick
+DECLARE
+    emp_id INT;
+BEGIN
+    SELECT eid INTO emp_id FROM Employees WHERE eid = in_eid;
+    IF eid NOT IN (SELECT eid FROM Bookers) THEN RAISE EXCEPTION 'Employee % does not exist', e_id;
+    ELSE 
+    -- edit resigned date for employee
+    -- remove employee from all related records
+    ---- Joins
+    ---- Sessions (check if booker resigns -> delete sessions)
+END;
 $$ LANGUAGE sql;
 
 
@@ -433,29 +443,24 @@ $$ LANGUAGE sql;
 
 
 CREATE OR REPLACE FUNCTION view_booking_report
- (<param> <type>, <param> <type>, ...)
-RETURNS <type> AS $$
-DECLARE
-    -- variables here
-BEGIN
-    -- Petrick
-END
+ (IN in_date DATE, IN eid INT)
+RETURNS SETOF RECORD AS $$
+    SELECT 
 $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION view_future_meeting
- (<param> <type>, <param> <type>, ...)
-RETURNS <type> AS $$
-DECLARE
-    -- variables here
-BEGIN
-    -- Petrick
+ (IN in_date DATE, IN eid INT)
+RETURNS  SETOF RECORD  AS $$
+    SELECT *
+    FROM Sessions
+    WHERE 
 END
 $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION view_manager_report
- (<param> <type>, <param> <type>, ...)
+ (IN in_date DATE, IN eid INT)
 RETURNS <type> AS $$
 DECLARE
     -- variables here
