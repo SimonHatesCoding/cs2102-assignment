@@ -24,7 +24,6 @@ DROP TABLE IF EXISTS
 Departments,
 Employees,
 HealthDeclarations,
-Contacts,
 Juniors,
 Bookers,
 Seniors,
@@ -59,7 +58,8 @@ CREATE TABLE Employees (
     ename           VARCHAR(50),
     email           VARCHAR(50),
     resigned_date   DATE,
-    did             INT             REFERENCES Departments(did)
+    did             INT             REFERENCES Departments(did),
+    contact         VARCHAR
 );
 
 CREATE TABLE HealthDeclarations (
@@ -68,12 +68,6 @@ CREATE TABLE HealthDeclarations (
     "date"      DATE,
     temperature float   NOT NULL,
     PRIMARY KEY ("date", eid)
-);
-
-CREATE TABLE Contacts (
-    contact_number  VARCHAR(50),
-    eid             INT             REFERENCES Employees(eid),
-    PRIMARY KEY (eid, contact_number)
 );
 
 CREATE TABLE Juniors (
