@@ -128,7 +128,7 @@ CREATE TABLE Joins (
     room    INT,
     "floor" INT,
     PRIMARY KEY (eid, "time", "date", room, "floor"),
-    FOREIGN KEY (room, "floor") REFERENCES MeetingRooms(room, "floor")
+    FOREIGN KEY ("time", "date", room, "floor") REFERENCES Sessions("time", "date", room, "floor")
 );
 
 
