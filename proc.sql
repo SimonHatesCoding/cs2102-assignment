@@ -233,8 +233,25 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION has_fever
+ (IN in_eid INT, OUT fever BOOLEAN)
+RETURNS BOOLEAN AS $$
+DECLARE
+    declarations INT := 0;
+BEGIN
+    SELECT COUNT(*) INTO declarations FROM HealthDeclarations WHERE eid = in_eid;
 
--- helper function check fever
+    IF declarations = 0 THEN 
+        RAISE EXCEPTION '% has never declared temperature, unable to know whether he/she has fever or not', in_eid;
+    END IF;
+    
+    SELECT CASE WHEN temperature > 37.5 THEN TRUE ELSE FALSE END INTO fever
+    FROM HealthDeclarations
+    WHERE eid = in_eid
+    ORDER BY "date" DESC
+    LIMIT 1;
+END
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE join_meeting
  (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)

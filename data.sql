@@ -1174,23 +1174,23 @@ INSERT INTO Managers
 -- RELATIONSHIPS (Modify and merge relations, add triggers as needed.)
 ------------------------------------------------------------------------
 
-INSERT INTO Joins VALUES
-    -- Teddy 
-;
+-- INSERT INTO Joins VALUES
+--     -- Teddy 
+-- ;
 
 
-INSERT INTO WorksIn VALUES
-    -- Teddy
-    -- REMARK: Merge into Employees?
-;
+-- INSERT INTO WorksIn VALUES
+--     -- Teddy
+--     -- REMARK: Merge into Employees?
+-- ;
 
 
-INSERT INTO Updates VALUES
-    -- Simon
-;
+-- INSERT INTO Updates VALUES
+--     -- Simon
+-- ;
 
 
-INSERT INTO LocatedIn VALUES
-    -- Tianle
-    -- REMARK: Merge into MeetingRooms?
-;
+-- INSERT INTO LocatedIn VALUES
+--     -- Tianle
+--     -- REMARK: Merge into MeetingRooms?
+-- ;
