@@ -456,10 +456,10 @@ $$ LANGUAGE plpgsql;
             WHERE "date" BETWEEN "start" AND "end"
             GROUP BY eid
         )
-        SELECT E.eid AS eid, "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) AS "days"
+        SELECT E.eid AS eid, in_end - in_start + 1 - COALESCE(D.counts,0) AS "days"
         FROM Employees E
         LEFT JOIN Declared D ON E.eid = D.eid
-        WHERE "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) > 0;
+        WHERE in_end - in_start + 1 - COALESCE(D.counts,0) > 0;
     $$ LANGUAGE sql;
 
 
@@ -502,63 +502,6 @@ $$ LANGUAGE plpgsql;
         AND (SELECT did FROM E WHERE eid = in_eid) = (SELECT did FROM R WHERE S."floor" = R."floor" AND S."room" = R."room")
         ORDER BY "date" ASC, "time" ASC
     $$ LANGUAGE sql;
-
-
-CREATE OR REPLACE FUNCTION non_compliance
- (IN in_start DATE, IN in_end DATE, OUT eid INT, OUT "days" INT)
-RETURNS  SETOF RECORD  AS $$
--- teddy
-    WITH Declared AS (
-        SELECT eid, COUNT(temperature) AS counts
-        FROM HealthDeclarations HD
-        WHERE HD.date BETWEEN in_start AND in_end
-        GROUP BY eid
-    )
-    SELECT E.eid AS eid, in_end - in_start + 1 - COALESCE(D.counts,0) AS "days"
-    FROM Employees E
-    LEFT JOIN Declared D ON E.eid = D.eid
-    WHERE in_end - in_start + 1 - COALESCE(D.counts,0) > 0;
-$$ LANGUAGE sql;
-
-
-CREATE OR REPLACE FUNCTION view_booking_report
- (IN in_start_date DATE, IN in_eid INT)
-RETURNS SETOF RECORD AS $$
-    --Petrick
-    SELECT "floor", room, "date", "time", 
-    CASE 
-        WHEN approver_id IS NOT NULL THEN TRUE
-        ELSE FALSE
-    END AS is_approved
-    FROM Sessions
-    WHERE "date" > in_start_date AND booker_id = in_eid
-    ORDER BY "date" ASC, "time" ASC
-$$ LANGUAGE sql;
-
-
-CREATE OR REPLACE FUNCTION view_future_meeting
- (IN in_start_date DATE, IN in_eid INT)
-RETURNS SETOF RECORD AS $$
-    --Petrick
-    SELECT "floor", room, "date", "time", 
-    FROM Joins
-    WHERE "date" > in_start_date AND eid = in_eid
-    ORDER BY "date" ASC, "time" ASC
-END
-$$ LANGUAGE sql;
-
-
-CREATE OR REPLACE FUNCTION view_manager_report
- (IN in_start_date DATE, IN in_eid INT)
-RETURNS SETOF RECORD AS $$
-    --Petrick
-    SELECT S."floor", S.room, S."date", S."time", S.booker_id
-    FROM Sessions S, MeetingRooms R, Managers M, Employees E
-    WHERE in_eid in (SELECT eid FROM M)
-    AND "date" > in_start_date
-    AND (SELECT did FROM E WHERE eid = in_eid) = (SELECT did FROM R WHERE S."floor" = R."floor" AND S."room" = R."room")
-    ORDER BY "date" ASC, "time" ASC
-$$ LANGUAGE sql;
 
 
 -- TRIGGERS
