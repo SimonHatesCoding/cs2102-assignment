@@ -447,20 +447,37 @@ $$ LANGUAGE plpgsql;
 
 -- contact_tracing
     CREATE OR REPLACE FUNCTION contact_tracing
-    (IN IN_eid INT, IN D DATE)
-    AS $$
+    (IN in_eid INT, IN D DATE, OUT close_contacts_eid)
+    RETURNS SETOF RECORD AS $$
     DECLARE
         temp INT;
     BEGIN
     /*
-    IF eid DOESNT DECLARE ON D -> IGNORE
     FIND CLOSE CONTACT
     REMOVE THEM FROM D+7 BUT ONLY THE ONES IN THE FUTURE
     */
         SELECT temperature INTO temp FROM HealthDeclarations HD 
-        WHERE HD.eid = in_eid AND HD.eid = CURRENT_DATE;
+        WHERE HD.eid = in_eid AND HD.eid = D;
 
+        IF temp IS NULL THEN
+            RAISE EXCEPTION 'eid: % did not declare temperature on date: %', in_eid, D;
+        ELSIF temp <= 37.5 THEN
+            RAISE NOTICE 'eid: % does not have fever, cancelling contact tracing...', in_eid;
+            RETURN;
+        END IF;
 
+        -- find close contact
+        WITH AffectedSessions AS (
+            SELECT S.time, S.date, S.room, S.floor
+            FROM "Sessions" S
+            LEFT JOIN Joins J 
+            ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
+            WHERE J.eid = in_eid AND S.date BETWEEN D - interval '3 days' AND D;           
+        )
+        SELECT DISTINCT(J.eid) AS close_contacts_eid
+        FROM AffectedSessions S
+        LEFT JOIN Joins J
+        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
 
     END;
     $$ LANGUAGE plpgsql;
