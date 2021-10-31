@@ -87,7 +87,7 @@ $$ LANGUAGE sql;
 
 
 CREATE OR REPLACE PROCEDURE add_employee
- (IN ename VARCHAR(50), IN contact VARCHAR(50), IN kind VARCHAR(10), IN did INT)
+ (IN in_ename VARCHAR(50), IN in_contact VARCHAR(50), IN kind VARCHAR(10), IN in_did INT)
 AS $$
  -- Teddy
 DECLARE
@@ -96,8 +96,7 @@ DECLARE
 BEGIN
     eid := generate_id();   
     SELECT concat(ename, eid, '@hotmail.com') INTO email;
-    INSERT INTO Employees (eid, ename, email, did) VALUES (eid, ename, email, did);
-    INSERT INTO Contacts VALUES (contact, eid);
+    INSERT INTO Employees (eid, ename, email, did, contact) VALUES (eid, in_ename, email, in_did, in_contact);
     IF kind = 'junior' THEN INSERT INTO Juniors VALUES (eid);
     ELSIF kind = 'senior' THEN 
         INSERT INTO Bookers VALUES (eid);
@@ -111,9 +110,19 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE remove_employee
- (<param> <type>, <param> <type>, ...)
+ (IN in_eid INT, IN in_date DATE)
 AS $$
-    -- Petrick
+DECLARE
+    emp_id INT;
+BEGIN
+    SELECT eid INTO emp_id FROM Employees WHERE eid = in_eid;
+    IF eid NOT IN (SELECT eid FROM Bookers) THEN RAISE EXCEPTION 'Employee % does not exist', e_id;
+    ELSE 
+    -- edit resigned date for employee
+    -- remove employee from all related records
+    ---- Joins
+    ---- Sessions (check if booker resigns -> delete sessions)
+END;
 $$ LANGUAGE sql;
 
 
@@ -193,7 +202,7 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION is_start_end_valid
+CREATE OR REPLACE FUNCTION all_sessions_exist
  (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
 RETURNS BOOLEAN AS $$
   -- Teddy
@@ -215,25 +224,67 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION is_start_end_approved
+CREATE OR REPLACE FUNCTION any_session_exist
  (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
 RETURNS BOOLEAN AS $$
-  -- Tedddy
+  -- Teddy
+DECLARE
+    found_sessions INT;
+BEGIN
+    SELECT COUNT(*) INTO found_sessions
+    FROM "Sessions"
+    WHERE "date" = in_date AND
+          room = in_room AND
+          "floor" = in_floor AND
+          "time" BETWEEN in_start AND (in_end - interval '1 min');
+    
+    -- trying to join sessions that have not been booked
+    RETURN found_sessions != 0;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION eid_in_all_sessions
+ (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN eid INT)
+RETURNS BOOLEAN AS $$
+DECLARE
+    found_sessions INT;
+    wanted_sessions INT;
+BEGIN
+    SELECT COUNT(*) INTO found_sessions
+    FROM "Sessions" S
+    LEFT JOIN Joins J 
+    ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
+    WHERE J.date = in_date AND
+          J.room = in_room AND
+          J.floor = in_floor AND
+          J.eid = in_eid AND
+          J.time BETWEEN in_start AND (in_end - interval '1 min');
+    
+    SELECT EXTRACT(epoch FROM in_end - in_time)/3600 INTO wanted_sessions;
+
+    RETURN found_sessions = wanted_sessions;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION any_session_approved
+ (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
+RETURNS BOOLEAN AS $$
+  -- Teddy
 DECLARE
     approver INT;
     curr_start TIME := in_start;
 BEGIN
-    WHILE curr_start < in_end
-        approver = NULL
+    WHILE curr_start < in_end LOOP
+        approver := NULL;
         SELECT approver_id INTO approver
         FROM "Sessions"
-        WHERE "time" = in_start AND
+        WHERE "time" = curr_start AND
               "date" = in_date AND
               room = in_room AND
               "floor" = in_floor;
         
         -- cannot join approved meeting
-        IF approver NOT NULL THEN RETURN TRUE;
+        IF approver IS NOT NULL THEN RETURN TRUE;
         END IF;
 
         curr_start := curr_start + interval '1 hour';
@@ -242,10 +293,31 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION has_fever
+ (IN in_eid INT, OUT fever BOOLEAN)
+RETURNS BOOLEAN AS $$
+DECLARE
+    declarations INT := 0;
+BEGIN
+    SELECT COUNT(*) INTO declarations FROM HealthDeclarations WHERE eid = in_eid;
+
+    IF declarations = 0 THEN 
+        RAISE EXCEPTION '% has never declared temperature, unable to know whether he/she has fever or not', in_eid;
+    END IF;
+    
+    SELECT CASE WHEN temperature > 37.5 THEN TRUE ELSE FALSE END INTO fever
+    FROM HealthDeclarations
+    WHERE eid = in_eid
+    ORDER BY "date" DESC
+    LIMIT 1;
+END
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE PROCEDURE join_meeting
  (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
 AS $$
   -- Teddy
+  -- all or nothing?
 DECLARE
     temp INT;
     curr_start TIME := in_start;
@@ -382,6 +454,11 @@ AS $$
 DECLARE
     temp INT;
 BEGIN
+/*
+IF eid DOESNT DECLARE ON D -> IGNORE
+FIND CLOSE CONTACT
+REMOVE THEM FROM D+7 BUT ONLY THE ONES IN THE FUTURE
+*/
     -- use the latest health declaration
     SELECT temperature INTO temp
     FROM HealthDeclarations
@@ -402,6 +479,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION non_compliance
  (IN "start" DATE, IN "end" DATE, OUT eid INT, OUT "days" INT)
 RETURNS  SETOF RECORD  AS $$
+-- teddy
     WITH Declared AS (
         SELECT eid, COUNT(temperature) AS counts
         FROM HealthDeclarations
@@ -416,29 +494,24 @@ $$ LANGUAGE sql;
 
 
 CREATE OR REPLACE FUNCTION view_booking_report
- (<param> <type>, <param> <type>, ...)
-RETURNS <type> AS $$
-DECLARE
-    -- variables here
-BEGIN
-    -- Petrick
-END
+ (IN in_date DATE, IN eid INT)
+RETURNS SETOF RECORD AS $$
+    SELECT 
 $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION view_future_meeting
- (<param> <type>, <param> <type>, ...)
-RETURNS <type> AS $$
-DECLARE
-    -- variables here
-BEGIN
-    -- Petrick
+ (IN in_date DATE, IN eid INT)
+RETURNS  SETOF RECORD  AS $$
+    SELECT *
+    FROM Sessions
+    WHERE 
 END
 $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION view_manager_report
- (<param> <type>, <param> <type>, ...)
+ (IN in_date DATE, IN eid INT)
 RETURNS <type> AS $$
 DECLARE
     -- variables here
