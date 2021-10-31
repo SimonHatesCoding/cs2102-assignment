@@ -132,6 +132,12 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION is_valid_eid(IN eid INT)
+RETURNS BOOLEAN AS $$
+
+$$ LANGUAGE plpgsql;
+
+-- make a hour function
 
 CREATE OR REPLACE PROCEDURE book_room
  (IN floor_num INT, IN room_num INT, IN dt DATE, IN start_hour INT, IN end_hour INT, IN e_id INT) AS $$
@@ -142,23 +148,27 @@ DECLARE
     t TIME;
 BEGIN
     -- Simon
-    SELECT temperature INTO e_temperature FROM HealthDeclarations WHERE eid = e_id AND dt = CURRENT_DATE;
+    SELECT temperature INTO e_temperature FROM HealthDeclarations WHERE eid = e_id AND dt = CURRENT_DATE; -- change check fever with the helper fn
     IF e_id NOT IN (SELECT eid FROM Bookers) THEN RAISE EXCEPTION 'Employee % is not authorized to make bookings', e_id;
     ELSIF e_temperature IS NOT NULL AND e_temperature > 37.5 THEN RAISE EXCEPTION 'Employee % is having a fever (%C)', e_id, e_temperature;
+    -- if NOT is_valid_room(floor_num, room_num)
     ELSIF (floor_num, room_num) NOT IN (SELECT room, floor FROM MeetingRooms) THEN RAISE EXCEPTION '%-% is not found', floor_num, room_num;
-    ELSIF ((end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR end_hour NOT BETWEEN 1 AND 24) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
+    ELSIF ((end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR (end_hour NOT BETWEEN 1 AND 24)) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
     ELSIF ((dt < CURRENT_DATE) OR (dt = CURRENT_DATE AND start_hour < date_part('hour', current_timestamp))) THEN RAISE EXCEPTION 'Not allowed to make a booking in the past: %, %', dt, start_hour;
 
-    ELSE FOR h IN start_hour..end_hour-1 LOOP
+    ELSE FOR h IN start_hour..end_hour-1 LOOP -- all or nothing
         IF h >= 10 THEN t := CAST(CONCAT(CAST(h AS TEXT), ':00') AS TIME);
         ELSE t:= CAST(CONCAT('0', CAST(h AS TEXT), ':00') AS TIME);
         END IF;
         INSERT INTO Sessions (eid, "time", "date", room, "floor") VALUES (e_id, time, dt, room_num, floor_num);
     END LOOP;
 
+    CALL join_meeting(floor_num, room_num, dt, start_hour, end_hour, e_id);
+
     END IF;
 END
 $$ LANGUAGE plpgsql;
+
 
 
 CREATE OR REPLACE PROCEDURE unbook_room
@@ -308,6 +318,7 @@ DECLARE
     dpmt_a INT;
 BEGIN
     -- Simon
+    -- Check if the meeting is alr approved
     IF e_id NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to approve the meeting', e_id;
     ELSIF ((end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR end_hour NOT BETWEEN 1 AND 24) THEN RAISE EXCEPTION 'Invalid hour input: %, %', start_hour, end_hour;
     ELSIF ((dt < CURRENT_DATE) OR (dt = CURRENT_DATE AND start_hour < date_part('hour', current_timestamp))) THEN RAISE EXCEPTION 'Not allowed to remove a booking in the past: %, %', dt, start_hour;
