@@ -28,7 +28,13 @@
         SELECT EXTRACT(epoch FROM in_end - in_time)/3600 INTO wanted_sessions;
 
         -- trying to join sessions that have not been booked
-        RETURN found_sessions == wanted_sessions;
+        IF found_sessions <> wanted_sessions THEN 
+            RAISE NOTICE 'Not all sessions exist in floor: % room: % date: % start: % end: %',
+            in_floor, in_room, in_date, in_start, in_end;
+            RETURN FALSE;
+        END IF;
+
+        RETURN TRUE;
     END
     $$ LANGUAGE plpgsql;
 
@@ -47,8 +53,13 @@
             "floor" = in_floor AND
             "time" BETWEEN in_start AND (in_end - interval '1 min');
         
-        -- trying to join sessions that have not been booked
-        RETURN found_sessions != 0;
+        IF found_sessions <> 0 THEN
+            RAISE NOTICE 'There are already some booked sessions in floor: % room: % date: % start: % end: %',
+            in_floor, in_room, in_date, in_start, in_end;
+            RETURN TRUE;
+        END IF;
+
+        RETURN FALSE;
     END
     $$ LANGUAGE plpgsql;
 
@@ -72,7 +83,13 @@
         
         SELECT EXTRACT(epoch FROM in_end - in_time)/3600 INTO wanted_sessions;
 
-        RETURN found_sessions = wanted_sessions;
+        IF found_sessions <> wanted_sessions THEN
+            RAISE NOTICE 'eid: % does not join all the sessions in floor: % room: % date: % start: % end: %', 
+            eid, in_floor, in_room, in_date, in_start, in_end;
+            RETURN FALSE;
+        END IF;
+
+        RETURN TRUE;
     END
     $$ LANGUAGE plpgsql;
 
@@ -95,7 +112,10 @@
                 "floor" = in_floor;
             
             -- cannot join approved meeting
-            IF approver IS NOT NULL THEN RETURN TRUE;
+            IF approver IS NOT NULL THEN 
+                RAISE NOTICE 'Some sessions in floor: % room: % date: % start: % end: % have been approved', 
+                in_floor, in_room, in_date, in_start, in_end;
+                RETURN TRUE;
             END IF;
 
             curr_start := curr_start + interval '1 hour';
@@ -131,7 +151,9 @@
     CREATE OR REPLACE FUNCTION is_valid_hour(IN start_hour INT, IN end_hour INT)
     RETURNS BOOLEAN AS $$
     BEGIN
-        IF (end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR (end_hour NOT BETWEEN 1 AND 24) THEN RETURN FALSE;
+        IF (end_hour <= start_hour) OR (start_hour NOT BETWEEN 1 AND 24) OR (end_hour NOT BETWEEN 1 AND 24) THEN 
+            RAISE NOTICE 'Invalid start_hour: % and end_hour: %', start_hour, end_hour;
+            RETURN FALSE;
         ELSE RETURN TRUE;
         END IF;
     END;
@@ -141,7 +163,9 @@
     CREATE OR REPLACE FUNCTION is_past(IN in_date DATE, in_hour INT)
     RETURNS BOOLEAN AS $$
     BEGIN
-        IF (in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND in_hour < date_part('hour', current_timestamp)) THEN RETURN TRUE;
+        IF (in_date < CURRENT_DATE) OR (in_date = CURRENT_DATE AND in_hour < date_part('hour', current_timestamp)) THEN 
+            RAISE NOTICE 'The given date and hour is in the past % %', in_date, in_hour;
+            RETURN TRUE;
         ELSE RETURN FALSE;
         END IF;
     END;
@@ -151,7 +175,9 @@
     CREATE OR REPLACE FUNCTION is_valid_room(IN in_floor INT, IN in_room INT)
     RETURNS BOOLEAN AS $$
     BEGIN
-        IF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN RETURN FALSE;
+        IF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN 
+            RAISE NOTICE 'The given floor: % and room: % is invalid', in_floor, in_room;
+            RETURN FALSE;
         ELSE RETURN TRUE;
         END IF;
     END;
@@ -332,10 +358,11 @@ $$ LANGUAGE plpgsql;
         in_start := hour_int_to_time(start_hour);
         in_end := hour_int_to_time(end_hour);
 
-    -- check that sessions from in_start to in_end exist
-        IF NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
-    -- find the sessions and check whether it's approved
-        ELSIF any_session_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
+        IF NOT is_valid_hour(start_hour, end_hour) OR 
+           is_past(in_date, start_hour) OR
+           NOT is_valid_room(in_floor, in_room) OR
+           NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) OR
+           any_session_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
         END IF;
 
     -- if everything is valid,
@@ -361,10 +388,11 @@ $$ LANGUAGE plpgsql;
         in_start := hour_int_to_time(start_hour);
         in_end := hour_int_to_time(end_hour);
 
-    -- check that sessions from in_start to in_end exist
-        IF NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
-    -- find the sessions and check whether it's approved
-        ELSIF any_session_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
+        IF NOT is_valid_hour(start_hour, end_hour) OR 
+           is_past(in_date, start_hour) OR
+           NOT is_valid_room(in_floor, in_room) OR
+           NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) OR
+           any_session_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
         END IF;
 
     -- delete the eid from the joins
