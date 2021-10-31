@@ -1,51 +1,3 @@
-------------------------------------------------------------------------
-------------------------------------------------------------------------
---
--- PROCEDURES
---
-------------------------------------------------------------------------
-------------------------------------------------------------------------
-
-
-------------------------------------------------------------------------
--- GENERIC TEMPLATE (adapted from L07 PLpgSQL):
-------------------------------------------------------------------------
--- CREATE OR REPLACE FUNCTION <name>
---  (<param> <type>, <param> <type>, ...)
--- RETURNS <type> AS $$
--- DECLARE
---  <variable>
---  <variable>
--- BEGIN
---  <code>
--- END
--- $$ LANGUAGE <sql OR plpgsql>;
-
--- CREATE OR REPLACE PROCEDURE <name>
---  (<param> <type>, <param> <type>, ...)
--- AS $$
---
---
--- <code>
---
---
--- $$ LANGUAGE <sql OR plpgsql>;
-
--- IF <condition> THEN <action>
--- ELSEIF <condition> THEN <action>
--- ...
--- ELSE <action>
--- END IF;
-
--- WHILE <condition> LOOP    
---  EXIT WHEN <condition>
---  <action>
--- END LOOP;
-
--- FOREACH <variable> IN ARRAY <iterable> LOOP
---  <action>
--- END LOOP;
-------------------------------------------------------------------------
 
 -- HELPERS
   -- all_sessions_exist
@@ -166,7 +118,7 @@
     END
     $$ LANGUAGE plpgsql;
 
-  --is_valid_hour
+  -- is_valid_hour
     CREATE OR REPLACE FUNCTION is_valid_hour(IN start_hour INT, IN end_hour INT)
     RETURNS BOOLEAN AS $$
     BEGIN
@@ -176,7 +128,7 @@
     END;
     $$ LANGUAGE plpgsql;
 
-  --is_past
+  -- is_past
     CREATE OR REPLACE FUNCTION is_past(IN in_date DATE, in_hour INT)
     RETURNS BOOLEAN AS $$
     BEGIN
@@ -186,12 +138,22 @@
     END;
     $$ LANGUAGE plpgsql;
 
-  --is_valid_room
+  -- is_valid_room
     CREATE OR REPLACE FUNCTION is_valid_room(IN in_floor INT, IN in_room INT)
     RETURNS BOOLEAN AS $$
     BEGIN
         IF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN RETURN FALSE;
         ELSE RETURN TRUE;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+
+  -- hour_int_to_time
+    CREATE OR REPLACE FUNCTION hour_int_to_time(IN in_hour INT)
+    RETURNS TIME AS $$
+    BEGIN
+        IF in_hour >= 10 THEN RETURN CAST(CONCAT(CAST(in_hour AS TEXT), ':00') AS TIME);
+        ELSE RETURN CAST(CONCAT('0', CAST(in_hour AS TEXT), ':00') AS TIME);
         END IF;
     END;
     $$ LANGUAGE plpgsql;
@@ -489,48 +451,60 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION non_compliance
- (IN "start" DATE, IN "end" DATE, OUT eid INT, OUT "days" INT)
+ (IN in_start DATE, IN in_end DATE, OUT eid INT, OUT "days" INT)
 RETURNS  SETOF RECORD  AS $$
 -- teddy
     WITH Declared AS (
         SELECT eid, COUNT(temperature) AS counts
-        FROM HealthDeclarations
-        WHERE "date" BETWEEN "start" AND "end"
+        FROM HealthDeclarations HD
+        WHERE HD.date BETWEEN in_start AND in_end
         GROUP BY eid
     )
-    SELECT E.eid AS eid, "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) AS "days"
+    SELECT E.eid AS eid, in_end - in_start + 1 - COALESCE(D.counts,0) AS "days"
     FROM Employees E
     LEFT JOIN Declared D ON E.eid = D.eid
-    WHERE "end"::DATE - "start"::DATE + 1 - COALESCE(D.counts,0) > 0;
+    WHERE in_end - in_start + 1 - COALESCE(D.counts,0) > 0;
 $$ LANGUAGE sql;
 
 
 CREATE OR REPLACE FUNCTION view_booking_report
- (IN in_date DATE, IN eid INT)
+ (IN in_start_date DATE, IN in_eid INT)
 RETURNS SETOF RECORD AS $$
-    SELECT 
-$$ LANGUAGE plpgsql;
+    --Petrick
+    SELECT "floor", room, "date", "time", 
+    CASE 
+        WHEN approver_id IS NOT NULL THEN TRUE
+        ELSE FALSE
+    END AS is_approved
+    FROM Sessions
+    WHERE "date" > in_start_date AND booker_id = in_eid
+    ORDER BY "date" ASC, "time" ASC
+$$ LANGUAGE sql;
 
 
 CREATE OR REPLACE FUNCTION view_future_meeting
- (IN in_date DATE, IN eid INT)
-RETURNS  SETOF RECORD  AS $$
-    SELECT *
-    FROM Sessions
-    WHERE 
+ (IN in_start_date DATE, IN in_eid INT)
+RETURNS SETOF RECORD AS $$
+    --Petrick
+    SELECT "floor", room, "date", "time", 
+    FROM Joins
+    WHERE "date" > in_start_date AND eid = in_eid
+    ORDER BY "date" ASC, "time" ASC
 END
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE sql;
 
 
 CREATE OR REPLACE FUNCTION view_manager_report
- (IN in_date DATE, IN eid INT)
-RETURNS <type> AS $$
-DECLARE
-    -- variables here
-BEGIN
-    -- Petrick
-END
-$$ LANGUAGE plpgsql;
+ (IN in_start_date DATE, IN in_eid INT)
+RETURNS SETOF RECORD AS $$
+    --Petrick
+    SELECT S."floor", S.room, S."date", S."time", S.booker_id
+    FROM Sessions S, MeetingRooms R, Managers M, Employees E
+    WHERE in_eid in (SELECT eid FROM M)
+    AND "date" > in_start_date
+    AND (SELECT did FROM E WHERE eid = in_eid) = (SELECT did FROM R WHERE S."floor" = R."floor" AND S."room" = R."room")
+    ORDER BY "date" ASC, "time" ASC
+$$ LANGUAGE sql;
 
 
 -- TRIGGERS
@@ -572,14 +546,40 @@ $$ LANGUAGE plpgsql;
     FOR EACH ROW EXECUTE FUNCTION check_fever();
 
   -- Joins
-    CREATE OR REPLACE FUNCTION fever_cannot_join()
+    CREATE OR REPLACE PROCEDURE capacity_and_fever_check()
     RETURNS TRIGGER AS $$
+    DECLARE
+        capacity INT;
+        joined INT;
     BEGIN
         IF has_fever(NEW.eid) THEN RETURN NULL;
-        ELSE RETURN NEW;
+        END IF;
+
+        -- find out the capacity of the room for that day
+        SELECT U.capacity INTO capacity
+        FROM Updates U
+        WHERE U.room = NEW.room AND
+              U.floor = NEW.floor AND
+              U.date <= NEW.date
+        ORDER BY U.date DESC
+        LIMIT 1
+
+        -- find out how many employees have already joined
+        SELECT COUNT(*) INTO joined
+        FROM Joins J
+        WHERE J.time = NEW.time AND
+              J.date = NEW.date AND
+              J.room = NEW.room AND
+              J.floor = NEW.floor
+        
+        IF joined = capacity THEN RETURN NULL;
+        END IF;
+
+        RETURN NEW;
     END
-    $$ LANGUAGE plpgsql;
 
     CREATE TRIGGER TR_Joins_BeforeInsert
     BEFORE INSERT ON Joins
-    FOR EACH ROW EXECUTE FUNCTION fever_cannot_join();
+    FOR EACH ROW EXECUTE FUNCTION capacity_and_fever_check();
+
+
