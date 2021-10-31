@@ -140,7 +140,7 @@ DECLARE
     -- variables here
     e_temperature FLOAT;
     h INT;
-    t VARCHAR(5);
+    t TIME;
 BEGIN
     -- Simon
     SELECT temperature INTO e_temperature FROM HealthDeclarations WHERE eid = e_id AND dt = CURRENT_DATE;
@@ -151,10 +151,10 @@ BEGIN
     ELSIF ((dt < CURRENT_DATE) OR (dt = CURRENT_DATE AND start_hour < date_part('hour', current_timestamp))) THEN RAISE EXCEPTION 'Not allowed to make a booking in the past: %, %', dt, start_hour;
 
     ELSE FOR h IN start_hour..end_hour-1 LOOP
-        IF h >= 10 THEN t := '%:00', h;
-        ELSE t:= '0%:00', h;
+        IF h >= 10 THEN t := CAST(CONCAT(CAST(h AS TEXT), ':00') AS TIME);
+        ELSE t:= CAST(CONCAT('0', CAST(h AS TEXT), ':00') AS TIME);
         END IF;
-        INSERT INTO Sessions (eid, "time", "date", room, "floor") VALUES (e_id, time, dt, room, floor);
+        INSERT INTO Sessions (eid, "time", "date", room, "floor") VALUES (e_id, time, dt, room_num, floor_num);
     END LOOP;
 
     END IF;

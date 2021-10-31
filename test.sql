@@ -93,6 +93,8 @@ SELECT * FROM non_compliance('2021-09-10', '2021-09-20');
 --         END IF;
 --         INSERT INTO Sessions VALUES (t, dt, room_num, floor_num, e_id);
 --     END LOOP;
+CALL book_room(3,1,'2021-10-30',10,12,4);
+CALL book_room(3,1,'2021-10-30',10,12,1);
 
 --     END IF;
 -- END
