@@ -167,16 +167,6 @@
     END;
     $$ LANGUAGE plpgsql;
 
-  --hour_int_to_time
-    CREATE OR REPLACE FUNCTION hour_int_to_time(IN in_hour INT)
-    RETURNS TIME AS $$
-    BEGIN
-        IF in_hour >= 10 THEN RETURN CAST(CONCAT(CAST(in_hour AS TEXT), ':00') AS TIME);
-        ELSE RETURN CAST(CONCAT('0', CAST(in_hour AS TEXT), ':00') AS TIME);
-        END IF;
-    END;
-    $$ LANGUAGE plpgsql;
-
 ------------------------------------------------------------------------
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
@@ -333,13 +323,17 @@ $$ LANGUAGE plpgsql;
 
 -- join_meeting
     CREATE OR REPLACE PROCEDURE join_meeting
-    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour TIME, IN end_hour TIME, IN in_eid INT)
     AS $$
     -- Teddy
     DECLARE
-        temp INT;
-        curr_start TIME := in_start;
+        in_start TIME;
+        in_end TIME;
+        curr_start TIME;
     BEGIN
+        in_start := hour_int_to_time(start_hour);
+        in_end := hour_int_to_time(end_hour);
+
     -- check that sessions from in_start to in_end exist
         IF NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
     -- find the sessions and check whether it's approved
@@ -359,10 +353,16 @@ $$ LANGUAGE plpgsql;
 
 -- leave_meeting
     CREATE OR REPLACE FUNCTION leave_meeting
-    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT)
     RETURNS <type> AS $$
         -- Teddy
+    DECLARE
+        in_start TIME;
+        in_end TIME;
     BEGIN 
+        in_start := hour_int_to_time(start_hour);
+        in_end := hour_int_to_time(end_hour);
+
     -- check that sessions from in_start to in_end exist
         IF NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
     -- find the sessions and check whether it's approved
