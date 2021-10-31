@@ -90,6 +90,7 @@ CREATE OR REPLACE PROCEDURE add_employee
  (IN ename VARCHAR(50), IN contact VARCHAR(50), IN kind VARCHAR(10), IN did INT)
 AS $$
  -- Teddy
+ -- remove Contacts tables
 DECLARE
     email VARCHAR(50);
     eid INT := 0;
@@ -205,10 +206,10 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION is_start_end_approved
+CREATE OR REPLACE FUNCTION is_start_end_any_approved
  (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
 RETURNS BOOLEAN AS $$
-  -- Tedddy
+  -- Teddy
 DECLARE
     approver INT;
     curr_start TIME := in_start;
@@ -217,7 +218,7 @@ BEGIN
         approver = NULL
         SELECT approver_id INTO approver
         FROM "Sessions"
-        WHERE "time" = in_start AND
+        WHERE "time" = curr_start AND
               "date" = in_date AND
               room = in_room AND
               "floor" = in_floor;
@@ -232,10 +233,14 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
+
+-- helper function check fever
+
 CREATE OR REPLACE PROCEDURE join_meeting
  (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN in_eid INT)
 AS $$
   -- Teddy
+  -- all or nothing?
 DECLARE
     temp INT;
     curr_start TIME := in_start;
@@ -371,6 +376,11 @@ AS $$
 DECLARE
     temp INT;
 BEGIN
+/*
+IF eid DOESNT DECLARE ON D -> IGNORE
+FIND CLOSE CONTACT
+REMOVE THEM FROM D+7 BUT ONLY THE ONES IN THE FUTURE
+*/
     -- use the latest health declaration
     SELECT temperature INTO temp
     FROM HealthDeclarations
@@ -391,6 +401,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION non_compliance
  (IN "start" DATE, IN "end" DATE, OUT eid INT, OUT "days" INT)
 RETURNS  SETOF RECORD  AS $$
+-- teddy
     WITH Declared AS (
         SELECT eid, COUNT(temperature) AS counts
         FROM HealthDeclarations
