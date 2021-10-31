@@ -135,11 +135,11 @@ CREATE TABLE Joins (
 CREATE TABLE Updates (
     -- Simon
     eid         INT     REFERENCES Managers(eid),
-    "date"      DATE,
+    "date"      DATE DEFAULT DATE('2020-10-01'),
     "floor"     INT,
     room        INT,
     capacity    INT     NOT NULL,
-    PRIMARY KEY (eid, "date", "floor", room)
+    PRIMARY KEY (eid, "date", "floor", room),
     FOREIGN KEY ("floor", room) REFERENCES MeetingRooms("floor", room)
 );
 
