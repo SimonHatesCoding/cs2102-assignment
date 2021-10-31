@@ -1149,37 +1149,35 @@ INSERT INTO Managers
     insert into MeetingRooms (room, "floor", rname, did) values (03, 10, 'Hufflepuff Meeting Room', 10);
     insert into MeetingRooms (room, "floor", rname, did) values (04, 10, 'Ravenclaw Meeting Room', 10);
     insert into MeetingRooms (room, "floor", rname, did) values (05, 10, 'Slytherin Meeting Room', 10)
-;
 
 
 --Sessions
 --(see notes.txt for list of booker_ids and aprover_ids)
     -- Petrick
     -- CASE A (10): approved meeting AND approver_id <> booker_id AND session == 1hr
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('09:00', '2021-10-19', 01, 01, 10, 20);
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('10:00', '2021-10-19', 02, 02, 1, 11);
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('09:00', '2021-10-19', 01, 01, 110, 20);
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('10:00', '2021-10-19', 02, 02, 1, 111);
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('11:00', '2021-10-19', 03, 03, 102, 112);
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('12:00', '2021-10-20', 04, 04, 203, 213);
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('13:00', '2021-10-20', 05, 05, 304, 314);
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('14:00', '2021-10-20', 01, 06, 205, 315);
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('15:00', '2021-10-20', 02, 07, 306, 216);
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('12:00', '2021-10-20', 04, 04, 203, 313);
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('13:00', '2021-10-20', 05, 05, 304, 314); 
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('14:00', '2021-10-20', 01, 06, 205, 315); 
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('15:00', '2021-10-20', 02, 07, 206, 216);
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('16:00', '2021-10-21', 03, 08, 207, 17);
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('17:00', '2021-10-21', 04, 09, 8, 318);
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('17:00', '2021-10-21', 04, 09, 8, 218);
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('18:00', '2021-10-21', 05, 10, 109, 219);
-    
-    -- CASE B (5): approved meeting AND approver_id == booker_id AND session == 1hr
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('09:00', '2021-10-21', 01, 02, 11, 11);
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('10:00', '2021-10-20', 02, 04, 113, 113);
+
+    -- CASE B (10): approved meeting AND approver_id == booker_id AND session == 1hr
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('09:00', '2021-10-21', 01, 02, 111, 111);
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('10:00', '2021-10-20', 02, 04, 313, 313);
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('11:00', '2021-10-20', 03, 06, 215, 215);
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('12:00', '2021-10-19', 04, 08, 317, 317);
-    -- ** FULL ROOM **
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('13:00', '2021-10-19', 05, 10, 19, 19); 
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('12:00', '2021-10-19', 04, 08, 17, 17);
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('13:00', '2021-10-19', 05, 10, 19, 19);
 
     -- CASE C (10): approved meeting AND approver_id <> booker_id AND session > 1hr
     ---- Meeting C1: 2021/10/21 13:00-16:00 at (01, 03)
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('13:00', '2021-10-21', 01, 03, 2, 312);
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('14:00', '2021-10-21', 01, 03, 2, 312);
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('15:00', '2021-10-21', 01, 03, 2, 312);
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('13:00', '2021-10-21', 01, 03, 2, 212);
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('14:00', '2021-10-21', 01, 03, 2, 212);
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('15:00', '2021-10-21', 01, 03, 2, 212);
     ---- Meeting C2: 2021/10/20 16:00-19:00 at (02, 05) ** PARTIALLY APPROVED **
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('16:00', '2021-10-20', 02, 05, 104, 114);
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('17:00', '2021-10-20', 02, 05, 104, 114);
@@ -1192,7 +1190,7 @@ INSERT INTO Managers
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('17:00', '2021-10-19', 04, 06, 205, 15);
 
     -- CASE D (5) unapproved meeting AND session == 1hr
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('09:00', '2021-10-22', 01, 01, 10, null);
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('09:00', '2021-10-22', 01, 01, 110, null);
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('10:00', '2021-10-22', 02, 02, 1, null);
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('11:00', '2021-10-22', 03, 03, 102, null);
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('12:00', '2021-10-22', 04, 04, 203, null);
@@ -1202,67 +1200,136 @@ INSERT INTO Managers
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('09:00', '2021-10-23', 02, 04, 303, null);
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('10:00', '2021-10-23', 02, 04, 303, null);
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('11:00', '2021-10-23', 02, 04, 303, null);
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('14:00', '2021-10-23', 04, 01, 10, null);
-    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('15:00', '2021-10-23', 05, 01, 10, null)
-;
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('14:00', '2021-10-23', 04, 01, 110, null);
+    insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('15:00', '2021-10-23', 05, 01, 110, null);
 
 ------------------------------------------------------------------------
 -- RELATIONSHIPS (Modify and merge relations, add triggers as needed.)
 ------------------------------------------------------------------------
 
-
--- perlu meeting yang partially approved
--- 
 --Joins
-    -- Petrick
-    -- CASE A (10): approved meeting AND approver_id <> booker_id AND session == 1hr
-    insert into Joins (eid, "time", "date", room, "floor") values ('09:00', '2021-10-19', 01, 01, 10, 20);
-    insert into Joins (eid, "time", "date", room, "floor") values ('10:00', '2021-10-19', 02, 02, 1, 11);
-    insert into Joins (eid, "time", "date", room, "floor") values ('11:00', '2021-10-19', 03, 03, 102, 112);
-    insert into Joins (eid, "time", "date", room, "floor") values ('12:00', '2021-10-20', 04, 04, 203, 213);
-    insert into Joins (eid, "time", "date", room, "floor") values ('13:00', '2021-10-20', 05, 05, 304, 314);
-    insert into Joins (eid, "time", "date", room, "floor") values ('14:00', '2021-10-20', 01, 06, 205, 315);
-    insert into Joins (eid, "time", "date", room, "floor") values ('15:00', '2021-10-20', 02, 07, 306, 216);
-    insert into Joins (eid, "time", "date", room, "floor") values ('16:00', '2021-10-21', 03, 08, 207, 17);
-    insert into Joins (eid, "time", "date", room, "floor") values ('17:00', '2021-10-21', 04, 09, 8, 318);
-    insert into Joins (eid, "time", "date", room, "floor") values ('18:00', '2021-10-21', 05, 10, 109, 219);
+    -- CASE A: approved meeting AND approver_id <> booker_id AND session == 1hr
+    insert into Joins (eid, "time", "date", room, "floor") values (110, '09:00', '2021-10-19', 01, 01); 
+    insert into Joins (eid, "time", "date", room, "floor") values (21,  '09:00', '2021-10-19', 01, 01); 
+    insert into Joins (eid, "time", "date", room, "floor") values (22,  '09:00', '2021-10-19', 01, 01); 
 
-    -- CASE B (5): approved meeting AND approver_id == booker_id AND session == 1hr
-    insert into Joins (eid, "time", "date", room, "floor") values ('09:00', '2021-10-21', 01, 02, 11, 11);
-    insert into Joins (eid, "time", "date", room, "floor") values ('10:00', '2021-10-20', 02, 04, 113, 113);
-    insert into Joins (eid, "time", "date", room, "floor") values ('11:00', '2021-10-20', 03, 06, 215, 215);
-    insert into Joins (eid, "time", "date", room, "floor") values ('12:00', '2021-10-19', 04, 08, 317, 317);
-    insert into Joins (eid, "time", "date", room, "floor") values ('13:00', '2021-10-19', 05, 10, 19, 19);
+    insert into Joins (eid, "time", "date", room, "floor") values (1,   '10:00', '2021-10-19', 02, 02); 
+    insert into Joins (eid, "time", "date", room, "floor") values (34,  '10:00', '2021-10-19', 02, 02); 
+    insert into Joins (eid, "time", "date", room, "floor") values (40,  '10:00', '2021-10-19', 02, 02); 
+
+    insert into Joins (eid, "time", "date", room, "floor") values (102, '11:00', '2021-10-19', 03, 03);
+    insert into Joins (eid, "time", "date", room, "floor") values (72,  '11:00', '2021-10-19', 03, 03);    
     
+    insert into Joins (eid, "time", "date", room, "floor") values (203, '12:00', '2021-10-20', 04, 04);   
+    insert into Joins (eid, "time", "date", room, "floor") values (140, '12:00', '2021-10-20', 04, 04);    
+ 
+    insert into Joins (eid, "time", "date", room, "floor") values (304, '13:00', '2021-10-20', 05, 05);  
+    insert into Joins (eid, "time", "date", room, "floor") values (169, '13:00', '2021-10-20', 05, 05);  
+
+    insert into Joins (eid, "time", "date", room, "floor") values (205, '14:00', '2021-10-20', 01, 06);
+    insert into Joins (eid, "time", "date", room, "floor") values (173, '14:00', '2021-10-20', 01, 06);  
+  
+    insert into Joins (eid, "time", "date", room, "floor") values (206, '15:00', '2021-10-20', 02, 07);  
+    insert into Joins (eid, "time", "date", room, "floor") values (189, '15:00', '2021-10-20', 02, 07);  
+
+    insert into Joins (eid, "time", "date", room, "floor") values (207, '16:00', '2021-10-21', 03, 08); 
+    insert into Joins (eid, "time", "date", room, "floor") values (315, '16:00', '2021-10-21', 03, 08); 
+
+    insert into Joins (eid, "time", "date", room, "floor") values (8,   '17:00', '2021-10-21', 04, 09);  
+    insert into Joins (eid, "time", "date", room, "floor") values (352, '17:00', '2021-10-21', 04, 09);  
+
+    insert into Joins (eid, "time", "date", room, "floor") values (109, '18:00', '2021-10-21', 05, 10);  
+    insert into Joins (eid, "time", "date", room, "floor") values (253, '18:00', '2021-10-21', 05, 10);   
+    insert into Joins (eid, "time", "date", room, "floor") values (370, '18:00', '2021-10-21', 05, 10);   
+    insert into Joins (eid, "time", "date", room, "floor") values (399, '18:00', '2021-10-21', 05, 10);
+
+    -- CASE B: approved meeting AND approver_id == booker_id AND session == 1hr
+    insert into Joins (eid, "time", "date", room, "floor") values (111, '09:00', '2021-10-21', 01, 02);
+    insert into Joins (eid, "time", "date", room, "floor") values (276, '09:00', '2021-10-21', 01, 02);
+
+    insert into Joins (eid, "time", "date", room, "floor") values (313, '10:00', '2021-10-20', 02, 04);
+    insert into Joins (eid, "time", "date", room, "floor") values (247, '10:00', '2021-10-20', 02, 04);
+
+    insert into Joins (eid, "time", "date", room, "floor") values (215, '11:00', '2021-10-20', 03, 06);
+    insert into Joins (eid, "time", "date", room, "floor") values (237, '11:00', '2021-10-20', 03, 06);
+
+    insert into Joins (eid, "time", "date", room, "floor") values (17,  '12:00', '2021-10-19', 04, 08);
+    insert into Joins (eid, "time", "date", room, "floor") values (40,  '12:00', '2021-10-19', 04, 08);
+
+    insert into Joins (eid, "time", "date", room, "floor") values (19,  '13:00', '2021-10-19', 05, 10);
+    insert into Joins (eid, "time", "date", room, "floor") values (343,  '13:00', '2021-10-19', 05, 10);
+
     -- CASE C (10): approved meeting AND approver_id <> booker_id AND session > 1hr
     ---- Meeting C1: 2021/10/21 13:00-16:00 at (01, 03)
-    insert into Joins (eid, "time", "date", room, "floor") values ('13:00', '2021-10-21', 01, 03, 2, 312);
-    insert into Joins (eid, "time", "date", room, "floor") values ('14:00', '2021-10-21', 01, 03, 2, 312);
-    insert into Joins (eid, "time", "date", room, "floor") values ('15:00', '2021-10-21', 01, 03, 2, 312);
-    ---- Meeting C2: 2021/10/20 16:00-19:00 at (02, 05) 
-    insert into Joins (eid, "time", "date", room, "floor") values ('16:00', '2021-10-20', 02, 05, 104, 114);
-    insert into Joins (eid, "time", "date", room, "floor") values ('17:00', '2021-10-20', 02, 05, 104, 114);
-    insert into Joins (eid, "time", "date", room, "floor") values ('18:00', '2021-10-20', 02, 05, 104, 114);
+    insert into Joins (eid, "time", "date", room, "floor") values (2,   '13:00', '2021-10-21', 01, 03);  
+    insert into Joins (eid, "time", "date", room, "floor") values (2,   '14:00', '2021-10-21', 01, 03);  
+    insert into Joins (eid, "time", "date", room, "floor") values (2,   '15:00', '2021-10-21', 01, 03); 
+    insert into Joins (eid, "time", "date", room, "floor") values (283  '13:00', '2021-10-21', 01, 03);  
+    insert into Joins (eid, "time", "date", room, "floor") values (283, '14:00', '2021-10-21', 01, 03);  
+    insert into Joins (eid, "time", "date", room, "floor") values (283, '15:00', '2021-10-21', 01, 03); 
+    insert into Joins (eid, "time", "date", room, "floor") values (348, '13:00', '2021-10-21', 01, 03);  
+    insert into Joins (eid, "time", "date", room, "floor") values (348  '14:00', '2021-10-21', 01, 03);  
+    insert into Joins (eid, "time", "date", room, "floor") values (348, '15:00', '2021-10-21', 01, 03); 
+
+    ---- Meeting C2: 2021/10/20 16:00-19:00 at (02, 05) ** PARTIALLY APPROVED **
+    insert into Joins (eid, "time", "date", room, "floor") values (104, '16:00', '2021-10-20', 02, 05);    
+    insert into Joins (eid, "time", "date", room, "floor") values (104, '17:00', '2021-10-20', 02, 05);    
+    insert into Joins (eid, "time", "date", room, "floor") values (104, '18:00', '2021-10-20', 02, 05); 
+    insert into Joins (eid, "time", "date", room, "floor") values (94,  '16:00', '2021-10-20', 02, 05);    
+    insert into Joins (eid, "time", "date", room, "floor") values (94,  '17:00', '2021-10-20', 02, 05);    
+    insert into Joins (eid, "time", "date", room, "floor") values (94,  '18:00', '2021-10-20', 02, 05); 
+    insert into Joins (eid, "time", "date", room, "floor") values (1,   '16:00', '2021-10-20', 02, 05);    
+    insert into Joins (eid, "time", "date", room, "floor") values (1,   '17:00', '2021-10-20', 02, 05);    
+    insert into Joins (eid, "time", "date", room, "floor") values (1,   '18:00', '2021-10-20', 02, 05); 
+
     ---- Meeting C3: 2021/10/19 14:00-16:00 at (03, 09) 
-    insert into Joins (eid, "time", "date", room, "floor") values ('14:00', '2021-10-19', 03, 09, 308, 218);
-    insert into Joins (eid, "time", "date", room, "floor") values ('15:00', '2021-10-19', 03, 09, 308, 218);
+    insert into Joins (eid, "time", "date", room, "floor") values (308, '14:00', '2021-10-19', 03, 09);    
+    insert into Joins (eid, "time", "date", room, "floor") values (308, '15:00', '2021-10-19', 03, 09);  
+    insert into Joins (eid, "time", "date", room, "floor") values (51,  '14:00', '2021-10-19', 03, 09);    
+    insert into Joins (eid, "time", "date", room, "floor") values (51,  '15:00', '2021-10-19', 03, 09);
+    insert into Joins (eid, "time", "date", room, "floor") values (8,   '14:00', '2021-10-19', 03, 09);    
+    insert into Joins (eid, "time", "date", room, "floor") values (8,   '15:00', '2021-10-19', 03, 09);
+
     ---- Meeting C4: 2021/10/19 16:00-18:00 at (04, 06) 
-    insert into Joins (eid, "time", "date", room, "floor") values ('16:00', '2021-10-19', 04, 06, 205, 15);
-    insert into Joins (eid, "time", "date", room, "floor") values ('17:00', '2021-10-19', 04, 06, 205, 15);
+    insert into Joins (eid, "time", "date", room, "floor") values (205, '16:00', '2021-10-19', 04, 06);   
+    insert into Joins (eid, "time", "date", room, "floor") values (205, '17:00', '2021-10-19', 04, 06);
+    insert into Joins (eid, "time", "date", room, "floor") values (87,  '16:00', '2021-10-19', 04, 06);   
+    insert into Joins (eid, "time", "date", room, "floor") values (87,  '17:00', '2021-10-19', 04, 06);   
     
-    -- CASE D (5) unapproved meeting AND session == 1hr
-    insert into Joins (eid, "time", "date", room, "floor") values ('09:00', '2021-10-22', 01, 01, 10, null);
-    insert into Joins (eid, "time", "date", room, "floor") values ('10:00', '2021-10-22', 02, 02, 1, null);
-    insert into Joins (eid, "time", "date", room, "floor") values ('11:00', '2021-10-22', 03, 03, 102, null);
-    insert into Joins (eid, "time", "date", room, "floor") values ('12:00', '2021-10-22', 04, 04, 203, null);
-    insert into Joins (eid, "time", "date", room, "floor") values ('13:00', '2021-10-22', 05, 05, 304, null);
+    -- CASE D: unapproved meeting AND session == 1hr
+    insert into Joins (eid, "time", "date", room, "floor") values (110, '09:00', '2021-10-22', 01, 01);     
+    insert into Joins (eid, "time", "date", room, "floor") values (152, '09:00', '2021-10-22', 01, 01);     
+
+    insert into Joins (eid, "time", "date", room, "floor") values (1,   '10:00', '2021-10-22', 02, 02);   
+    insert into Joins (eid, "time", "date", room, "floor") values (169, '10:00', '2021-10-22', 02, 02);
+    insert into Joins (eid, "time", "date", room, "floor") values (176, '10:00', '2021-10-22', 02, 02);   
+   
+
+    insert into Joins (eid, "time", "date", room, "floor") values (102, '11:00', '2021-10-22', 03, 03);     
+    insert into Joins (eid, "time", "date", room, "floor") values (235, '11:00', '2021-10-22', 03, 03);     
+
+    insert into Joins (eid, "time", "date", room, "floor") values (203, '12:00', '2021-10-22', 04, 04);     
+    insert into Joins (eid, "time", "date", room, "floor") values (270, '12:00', '2021-10-22', 04, 04);     
+
+    insert into Joins (eid, "time", "date", room, "floor") values (304, '13:00', '2021-10-22', 05, 05);     
+    insert into Joins (eid, "time", "date", room, "floor") values (360, '13:00', '2021-10-22', 05, 05);     
+    insert into Joins (eid, "time", "date", room, "floor") values (399, '13:00', '2021-10-22', 05, 05);     
     
-    -- CASE E (5) unapproved meeting AND session >= 1hr
-    insert into Joins (eid, "time", "date", room, "floor") values ('09:00', '2021-10-23', 02, 04, 303, null);
-    insert into Joins (eid, "time", "date", room, "floor") values ('10:00', '2021-10-23', 02, 04, 303, null);
-    insert into Joins (eid, "time", "date", room, "floor") values ('11:00', '2021-10-23', 02, 04, 303, null);
-    insert into Joins (eid, "time", "date", room, "floor") values ('14:00', '2021-10-23', 04, 01, 10, null);
-    insert into Joins (eid, "time", "date", room, "floor") values ('15:00', '2021-10-23', 05, 01, 10, null);
+    -- CASE E: unapproved meeting AND session >= 1hr
+    insert into Joins (eid, "time", "date", room, "floor") values (303, '09:00', '2021-10-23', 02, 04);     
+    insert into Joins (eid, "time", "date", room, "floor") values (303, '10:00', '2021-10-23', 02, 04);     
+    insert into Joins (eid, "time", "date", room, "floor") values (303, '11:00', '2021-10-23', 02, 04);     
+    insert into Joins (eid, "time", "date", room, "floor") values (352, '09:00', '2021-10-23', 02, 04);     
+    insert into Joins (eid, "time", "date", room, "floor") values (352, '10:00', '2021-10-23', 02, 04);     
+    insert into Joins (eid, "time", "date", room, "floor") values (352, '11:00', '2021-10-23', 02, 04);  
+
+    insert into Joins (eid, "time", "date", room, "floor") values (110, '14:00', '2021-10-23', 04, 01);     
+    insert into Joins (eid, "time", "date", room, "floor") values (110, '15:00', '2021-10-23', 05, 01);
+    insert into Joins (eid, "time", "date", room, "floor") values (261, '14:00', '2021-10-23', 04, 01);     
+    insert into Joins (eid, "time", "date", room, "floor") values (261, '15:00', '2021-10-23', 05, 01);
+    insert into Joins (eid, "time", "date", room, "floor") values (270, '14:00', '2021-10-23', 04, 01);     
+    insert into Joins (eid, "time", "date", room, "floor") values (270, '15:00', '2021-10-23', 05, 01);     
+    
 
 --Updates
     -- Simon
@@ -1315,5 +1382,4 @@ INSERT INTO Managers
     insert into Updates (eid, room, "floor", capacity) values (19, 02, 10, 4);
     insert into Updates (eid, room, "floor", capacity) values (19, 03, 10, 4);
     insert into Updates (eid, room, "floor", capacity) values (19, 04, 10, 4);
-    insert into Updates (eid, room, "floor", capacity) values (19, 05, 10, 4)
-;
+    insert into Updates (eid, room, "floor", capacity) values (19, 05, 10, 4);
