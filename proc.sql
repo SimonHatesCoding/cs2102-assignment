@@ -470,8 +470,8 @@
 
 -- contact_tracing
     CREATE OR REPLACE FUNCTION contact_tracing
-    (IN in_eid INT, IN D DATE, OUT out_eid INT)
-    RETURNS SETOF RECORD AS $$
+    (IN in_eid INT, IN D DATE)
+    RETURNS TABLE(out_eid INT) AS $$
     DECLARE
         temp INT;
     BEGIN
@@ -501,9 +501,9 @@
 
         -- remove from D to D+7
         DELETE FROM Joins J
-        WHERE J.date BETWEEN D AND D + interval '7 days' AND J.date AFTER CURRENT_DATE AND J.eid IN cte;
+        WHERE (J.date BETWEEN D AND D + interval '7 days') AND (J.date >= CURRENT_DATE) AND J.eid IN (SELECT * FROM CloseContacts);
 
-        SELECT * FROM CloseContacts;
+        RETURN QUERY SELECT * FROM CloseContacts;
 
         DROP VIEW AffectedSessions;
         DROP VIEW CloseContacts;
