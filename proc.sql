@@ -646,6 +646,7 @@ $$ LANGUAGE sql;
         DELETE FROM Joins WHERE eid = NEW.eid AND "date" >= NEW.date;
 
         -- call contact tracing
+        CALL contact_tracing(NEW.eid, NEW.date);
     END;
     $$ LANGUAGE plpgsql;
 
