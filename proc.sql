@@ -346,13 +346,11 @@ $$ LANGUAGE sql;
         ELSIF NOT is_valid_room(in_floor, in_room) THEN RETURN;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
+        ELSIF any_session_exist(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN; -- check 
 
         ELSE FOR h IN start_hour..end_hour-1 LOOP -- all or nothing
-            IF h >= 10 THEN t := hour_int_to_time(h);
-            ELSE t:= hour_int_to_time(h);
-            END IF;
-            INSERT INTO Sessions (eid, "time", "date", room, "floor") VALUES (in_eid, time, in_date, in_room, in_floor);
+            t:= hour_int_to_time(h);
+            INSERT INTO Sessions (eid, "time", "date", room, "floor") VALUES (in_eid, t, in_date, in_room, in_floor);
         END LOOP;
 
         END IF;
@@ -371,15 +369,11 @@ $$ LANGUAGE sql;
         IF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
         ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
-
-        ELSE FOR h IN start_hour..end_hour-1 LOOP
-            SELECT * INTO r FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
-            CONTINUE WHEN r IS NULL;
-            DELETE FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
-            DELETE FROM Joins WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
-        END LOOP;
-
         END IF;
+
+        FOR h IN start_hour..end_hour-1 LOOP
+            DELETE FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
+        END LOOP;
     END
     $$ LANGUAGE plpgsql;
 
@@ -411,7 +405,7 @@ $$ LANGUAGE sql;
 
             curr_start := curr_start + interval '1 hour';
         END LOOP;
-    END
+    END;
     $$ LANGUAGE plpgsql;
 
 -- leave_meeting
@@ -440,7 +434,7 @@ $$ LANGUAGE sql;
             room = in_room AND
             "floor" = in_floor AND
             "time" BETWEEN in_start AND (in_end - interval '1 min');
-    END
+    END;
     $$ LANGUAGE plpgsql;
 
 -- approve_meeting
@@ -449,8 +443,8 @@ $$ LANGUAGE sql;
     DECLARE
         -- variables here
         h INT;
-        dpmt_b INT;
-        dpmt_a INT;
+        did_b INT;
+        did_a INT;
     BEGIN
         -- Simon
         -- Check if the meeting is alr approved
@@ -458,19 +452,22 @@ $$ LANGUAGE sql;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
+        END IF;
 
-        ELSE FOR h in start_hour..end_hour-1 LOOP
-            SELECT did INTO dpmt_b FROM Employees WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
-            SELECT did INTO dpmt_a FROM Employees WHERE eid = in_eid;
-            IF dpmt_b <> dpmt_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, dpmt_a, in_floor, in_room, in_date, h, dpmt_b;
-            ELSE
-                UPDATE Sessions SET approver_id = in_eid WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
+        FOR h in start_hour..end_hour-1 LOOP
+            SELECT did INTO did_b FROM Employees
+            WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
+            SELECT did INTO did_a FROM Employees WHERE eid = in_eid;
+            IF did_b <> did_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, did_a, in_floor, in_room, in_date, h, did_b;
             END IF;
+            UPDATE Sessions SET approver_id = in_eid WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
         END LOOP;
 
-        END IF;
     END;
     $$ LANGUAGE plpgsql;
+
+-- reject_meeting
+-- check if it is alr approved
 
 ------------------------------------------------------------------------
 -- HEALTH (Readapt as necessary.)
@@ -486,14 +483,11 @@ $$ LANGUAGE sql;
 
 -- contact_tracing
     CREATE OR REPLACE FUNCTION contact_tracing
-    (IN in_eid INT, IN D DATE, OUT close_contacts_eid)
+    (IN in_eid INT, IN D DATE, OUT close_contacts_eid INT)
     RETURNS SETOF RECORD AS $$
     DECLARE
         temp INT;
     BEGIN
-    /*
-    REMOVE THEM FROM D+7 BUT ONLY THE ONES IN THE FUTURE
-    */
         SELECT temperature INTO temp FROM HealthDeclarations HD 
         WHERE HD.eid = in_eid AND HD.eid = D;
 
@@ -511,15 +505,17 @@ $$ LANGUAGE sql;
             LEFT JOIN Joins J 
             ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
             WHERE J.eid = in_eid AND S.date BETWEEN D - interval '3 days' AND D;           
+        ), cte AS (
+            SELECT DISTINCT(J.eid) AS close_contacts_eid
+            FROM AffectedSessions S
+            LEFT JOIN Joins J
+            ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
         )
-        SELECT DISTINCT(J.eid) AS close_contacts_eid
-        FROM AffectedSessions S
-        LEFT JOIN Joins J
-        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
-
+        SELECT * FROM cte;
+        -- TODO: 
         -- remove from D to D+7
         DELETE FROM Joins J
-        WHERE J.date BETWEEN D AND D + interval '7 days' AND J.date AFTER CURRENT_DATE AND J.eid IN close_contacts_eid;
+        WHERE J.date BETWEEN D AND D + interval '7 days' AND J.date AFTER CURRENT_DATE AND J.eid IN cte;
 
     END;
     $$ LANGUAGE plpgsql;
