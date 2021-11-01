@@ -561,18 +561,6 @@
 ------------------------------------------------------------------------
 -- TRIGGERS
 ------------------------------------------------------------------------
--- Departments
-    CREATE OR REPLACE FUNCTION core_departments() RETURNS TRIGGER AS $$
-    BEGIN
-        RAISE NOTICE 'Some users are trying to delete or update the core departments';
-        RETURN NULL;
-    END;
-    $$ LANGUAGE plpgsql;
-
-    DROP TRIGGER IF EXISTS check_core ON Departments;
-    CREATE TRIGGER check_core
-    BEFORE DELETE OR UPDATE ON Departments
-    FOR EACH ROW WHERE OLD.did IN (1,2,4,5,9) EXECUTE FUNCTION core_departments();
 
 -- Sessions
     CREATE OR REPLACE FUNCTION fever_cannot_book()
