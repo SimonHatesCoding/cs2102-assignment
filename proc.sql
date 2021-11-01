@@ -193,11 +193,51 @@
     END;
     $$ LANGUAGE plpgsql;
 
+<<<<<<< HEAD
 -- is_valid_eid
     CREATE OR REPLACE FUNCTION is_valid_eid(IN eid INT)
     RETURNS BOOLEAN AS $$
     -- code here
     $$ LANGUAGE plpgsql;
+=======
+------------------------------------------------------------------------
+-- BASIC (Readapt as necessary.)
+------------------------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE add_department
+(IN in_did INT, IN in_dname VARCHAR(50)) 
+AS $$
+    IF (in_did, in_dname) NOT IN (SELECT did, dname FROM Departments) THEN
+        INSERT INTO Departments VALUES (in_did, in_dname);
+    END IF;
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE PROCEDURE remove_department
+(IN in_did1 INT, IN in_did2)
+AS $$
+    IF in_did1 IN (SELECT did FROM Departments) AND 
+         in_did2 IN (SELECT did FROM Departments) THEN
+    UPDATE Employees SET did = in_did2 WHERE did = in_did1;
+    DELETE FROM Departments WHERE did = in_did1;
+    END IF;
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE PROCEDURE add_room
+ (IN in_room INT, IN "in_floor" INT, IN in_rname VARCHAR(50), IN in_did INT)
+AS $$
+    INSERT INTO MeetingRooms VALUES (in_room, "in_floor", in_rname, in_did);
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE PROCEDURE change_capacity
+(IN in_room INT, IN "in_floor" INT, IN in_capacity INT, IN in_date DATE, IN in_eid INT)
+AS $$
+    IF in_eid IN (SELECT * FROM Managers) THEN
+        UPDATE Updates SET capacity = in_cap WHERE room = in_room AND "floor" = "in_floor";
+        UPDATE Updates SET "date" = in_date WHERE room = in_room AND "floor" = "in_floor";
+        UPDATE Updates SET eid = in_eid WHERE room = in_room AND "floor" = "in_floor";
+    END IF;
+$$ LANGUAGE sql;
+>>>>>>> Meeting-Room-data
 
 -- generate_id
     CREATE OR REPLACE FUNCTION generate_id(OUT eid INT)
