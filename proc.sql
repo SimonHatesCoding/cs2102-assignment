@@ -193,19 +193,13 @@
     END;
     $$ LANGUAGE plpgsql;
 
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> main
+
 -- is_valid_eid
     CREATE OR REPLACE FUNCTION is_valid_eid(IN eid INT)
     RETURNS BOOLEAN AS $$
     -- code here
     $$ LANGUAGE plpgsql;
-<<<<<<< HEAD
-=======
-=======
->>>>>>> main
+
 ------------------------------------------------------------------------
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
@@ -213,84 +207,41 @@
 CREATE OR REPLACE PROCEDURE add_department
 (IN in_did INT, IN in_dname VARCHAR(50)) 
 AS $$
-    IF (in_did, in_dname) NOT IN (SELECT did, dname FROM Departments) THEN
-        INSERT INTO Departments VALUES (in_did, in_dname);
-    END IF;
+    INSERT INTO Departments VALUES (in_did, in_dname);
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE PROCEDURE remove_department
-(IN in_did1 INT, IN in_did2)
+(IN in_did1 INT, IN in_did2 INT)
 AS $$
     IF in_did1 IN (SELECT did FROM Departments) AND 
          in_did2 IN (SELECT did FROM Departments) THEN
     UPDATE Employees SET did = in_did2 WHERE did = in_did1;
+    -- Meeting room
     DELETE FROM Departments WHERE did = in_did1;
     END IF;
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE PROCEDURE add_room
- (IN in_room INT, IN "in_floor" INT, IN in_rname VARCHAR(50), IN in_did INT)
+ (IN in_room INT, IN in_floor INT, IN in_rname VARCHAR(50), IN in_did INT)
 AS $$
-    INSERT INTO MeetingRooms VALUES (in_room, "in_floor", in_rname, in_did);
+    INSERT INTO MeetingRooms VALUES (in_room, in_floor, in_rname, in_did);
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE PROCEDURE change_capacity
-(IN in_room INT, IN "in_floor" INT, IN in_capacity INT, IN in_date DATE, IN in_eid INT)
+(IN in_room INT, IN in_floor INT, IN in_capacity INT, IN in_date DATE, IN in_eid INT)
 AS $$
     IF in_eid IN (SELECT * FROM Managers) THEN
+    -- from the same department
         UPDATE Updates SET capacity = in_cap WHERE room = in_room AND "floor" = "in_floor";
         UPDATE Updates SET "date" = in_date WHERE room = in_room AND "floor" = "in_floor";
         UPDATE Updates SET eid = in_eid WHERE room = in_room AND "floor" = "in_floor";
     END IF;
 $$ LANGUAGE sql;
->>>>>>> Meeting-Room-data
 
 -- generate_id
     CREATE OR REPLACE FUNCTION generate_id(OUT eid INT)
     RETURNS INT AS $$
         SELECT MAX(eid)+1 FROM Employees;
-    $$ LANGUAGE sql;
-
-------------------------------------------------------------------------
--- BASIC (Readapt as necessary.)
-------------------------------------------------------------------------
--- add_department
-    CREATE OR REPLACE PROCEDURE add_department
-    (IN did INT, IN dname VARCHAR(50)) 
-    AS $$
-        -- Tianle
-        INSERT INTO Departments VALUES (did, dname);
-    $$ LANGUAGE sql;
-
--- remove_department
-    CREATE OR REPLACE PROCEDURE remove_department
-    (IN did INT)
-    AS $$
-        -- Tianle
-        DELETE FROM Departments WHERE did = OLD.did;
-        IF did IN (6, 7, 8) THEN
-        DELETE FROM Employees WHERE did = OLD.did;
-        ELSIF did = 3 THEN
-        UPDATE Employees SET OLD.did = 4 WHERE OLD.did = 4;
-        ELSIF did = 10 THEN
-        UPDATE Employees SET OLD.did = 5 WHERE OLD.did = 5;
-    $$ LANGUAGE sql;
-
--- add_room
-    CREATE OR REPLACE PROCEDURE add_room
-    (IN room INT, IN "floor" INT, IN rname VARCHAR(50), IN did INT)
-    AS $$
-        -- Tianle
-        INSERT INTO MeetingRooms VALUES (room, "floor", rname, did);
-    $$ LANGUAGE sql;
-
--- change_capacity
-    CREATE OR REPLACE PROCEDURE change_capacity
-    (IN room INT, IN "floor" INT, IN capacity INT, IN DATE )
-    AS $$
-        UPDATE Updates SET cap = capacity wHERE room = OLD.room AND "floor" = OLD.floor;
-        UPDATE Updates SET "date" = OLD."date" wHERE room = OLD.room AND "floor" = OLD.floor;
-        -- Tianle
     $$ LANGUAGE sql;
 
 -- add_employee
@@ -339,20 +290,27 @@ $$ LANGUAGE sql;
 ------------------------------------------------------------------------
 -- search_room
     CREATE OR REPLACE FUNCTION search_room
-<<<<<<< HEAD
     (IN in_capacity INT, IN in_date DATE, IN in_start_hour INT, IN in_end_hour INT)
     RETURNS TABLE(floor_num INT, room_num INT, department_id INT, capacity INT) AS $$
     DECLARE
-        
-=======
-    (<param> <type>, <param> <type>, ...)
-    RETURNS <type> AS $$
-    DECLARE
-        -- variables here
->>>>>>> main
+        r INT;
+        f INT;
+        r1 INT;
+        f1 INT;
     BEGIN
-        -- Tianle
-    END
+        IF NOT is_valid_hour(in_start_hour, in_end_hour) THEN RETURN NULL;
+        ELSIF is_past(in_date, in_start_hour) THEN RETURN NULL;
+        ELSE FOR r,f in (SELECT room, "floor" FROM MeetingRooms) LOOP
+            SELECT room INTO r1, "floor" INTO f1 FROM Sessions WHERE approver_id IS NULL AND 
+                in_capacity < (SELECT capacity FROM Updates WHERE room = r AND "floor" = f ORDER BY "date" DESC LIMIT 1);
+                -- Use helper function for capacity at a given date
+                -- Use Meeting Room data and left join Sessions
+            IF all_sessions_exist(f1, r1, in_date, in_start_hour, in_end_hour) THEN RETURN NEXT;
+            END IF;
+
+        END LOOP;
+        END IF;
+    END;
     $$ LANGUAGE plpgsql;
 
 -- book_room
