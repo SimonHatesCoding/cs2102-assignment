@@ -138,11 +138,11 @@
         IF temp IS NULL THEN
             RAISE NOTICE '% has not declared temperature today, unable to decide whether employee has a fever. 
             Taking a safer approach, employee is assumed to potentially have a fever until the employee declares otherwise', in_eid;
-            RETURNS TRUE; 
+            RETURN TRUE; 
         ELSIF temp > 37.5 THEN
-            RETURNS TRUE;
+            RETURN TRUE;
         ELSE
-            RETURNS FALSE;
+            RETURN FALSE;
         END IF;
     END
     $$ LANGUAGE plpgsql;
@@ -378,9 +378,9 @@
     $$ LANGUAGE plpgsql;
 
 -- leave_meeting
-    CREATE OR REPLACE FUNCTION leave_meeting
+    CREATE OR REPLACE PROCEDURE leave_meeting
     (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT)
-    RETURNS <type> AS $$
+    AS $$
         -- Teddy
     DECLARE
         in_start TIME;
