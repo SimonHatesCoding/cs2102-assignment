@@ -125,7 +125,7 @@ CREATE TABLE Joins (
     room    INT,
     "floor" INT,
     PRIMARY KEY (eid, "time", "date", room, "floor"),
-    FOREIGN KEY ("time", "date", room, "floor") REFERENCES Sessions("time", "date", room, "floor")
+    FOREIGN KEY ("time", "date", room, "floor") REFERENCES Sessions("time", "date", room, "floor") ON DELETE CASCADE
 );
 
 CREATE TABLE Updates (

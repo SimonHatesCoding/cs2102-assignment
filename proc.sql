@@ -268,16 +268,23 @@
     CREATE OR REPLACE PROCEDURE remove_employee
     (IN in_eid INT, IN in_date DATE)
     AS $$
-    DECLARE
-        emp_id INT;
-    BEGIN
-        SELECT eid INTO emp_id FROM Employees WHERE eid = in_eid;
-        IF eid NOT IN (SELECT eid FROM Bookers) THEN RAISE EXCEPTION 'Employee % does not exist', e_id;
-        ELSE 
-        -- edit resigned date for employee
-        -- remove employee from all related records
-        ---- Joins
-        ---- Sessions (check if booker resigns -> delete sessions)
+        IF in_eid NOT IN (SELECT eid FROM Employees) THEN 
+            -- ignore if eid does not exist
+            RAISE EXCEPTION 'Employee % does not exist.', in_eid;
+
+        ELSE
+            -- employe exists, so:
+            -- (1) update their resigned_date
+            UPDATE Employee SET resigned_date = in_date WHERE eid = in_eid;
+
+            -- (2) remove them from joined meetings after resigned date
+            DELETE FROM Joins WHERE eid = in_eid AND "date" >= in_date
+
+            IF eid IN Bookers THEN
+                -- Bookers routine: delete Sessions after resigned date
+                -- (Joining participants will ON CASCADE DELETE)
+                DELETE FROM Sessions WHERE booker_id = in_eid AND "date" >= in_date;
+        ENDIF;
     END;
     $$ LANGUAGE sql;
 
