@@ -193,11 +193,19 @@
     END;
     $$ LANGUAGE plpgsql;
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> main
 -- is_valid_eid
     CREATE OR REPLACE FUNCTION is_valid_eid(IN eid INT)
     RETURNS BOOLEAN AS $$
     -- code here
     $$ LANGUAGE plpgsql;
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> main
 ------------------------------------------------------------------------
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
@@ -235,6 +243,7 @@ AS $$
         UPDATE Updates SET eid = in_eid WHERE room = in_room AND "floor" = "in_floor";
     END IF;
 $$ LANGUAGE sql;
+>>>>>>> Meeting-Room-data
 
 -- generate_id
     CREATE OR REPLACE FUNCTION generate_id(OUT eid INT)
@@ -330,10 +339,17 @@ $$ LANGUAGE sql;
 ------------------------------------------------------------------------
 -- search_room
     CREATE OR REPLACE FUNCTION search_room
+<<<<<<< HEAD
     (IN in_capacity INT, IN in_date DATE, IN in_start_hour INT, IN in_end_hour INT)
     RETURNS TABLE(floor_num INT, room_num INT, department_id INT, capacity INT) AS $$
     DECLARE
         
+=======
+    (<param> <type>, <param> <type>, ...)
+    RETURNS <type> AS $$
+    DECLARE
+        -- variables here
+>>>>>>> main
     BEGIN
         -- Tianle
     END
