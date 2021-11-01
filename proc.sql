@@ -193,44 +193,6 @@
     END;
     $$ LANGUAGE plpgsql;
 
-------------------------------------------------------------------------
--- BASIC (Readapt as necessary.)
-------------------------------------------------------------------------
-
-CREATE OR REPLACE PROCEDURE add_department
-(IN in_did INT, IN in_dname VARCHAR(50)) 
-AS $$
-    IF (in_did, in_dname) NOT IN (SELECT did, dname FROM Departments) THEN
-        INSERT INTO Departments VALUES (in_did, in_dname);
-    END IF;
-$$ LANGUAGE sql;
-
-CREATE OR REPLACE PROCEDURE remove_department
-(IN in_did1 INT, IN in_did2)
-AS $$
-    IF in_did1 IN (SELECT did FROM Departments) AND 
-         in_did2 IN (SELECT did FROM Departments) THEN
-    UPDATE Employees SET did = in_did2 WHERE did = in_did1;
-    DELETE FROM Departments WHERE did = in_did1;
-    END IF;
-$$ LANGUAGE sql;
-
-CREATE OR REPLACE PROCEDURE add_room
- (IN in_room INT, IN "in_floor" INT, IN in_rname VARCHAR(50), IN in_did INT)
-AS $$
-    INSERT INTO MeetingRooms VALUES (in_room, "in_floor", in_rname, in_did);
-$$ LANGUAGE sql;
-
-CREATE OR REPLACE PROCEDURE change_capacity
-(IN in_room INT, IN "in_floor" INT, IN in_capacity INT, IN in_date DATE, IN in_eid INT)
-AS $$
-    IF in_eid IN (SELECT * FROM Managers) THEN
-        UPDATE Updates SET capacity = in_cap WHERE room = in_room AND "floor" = "in_floor";
-        UPDATE Updates SET "date" = in_date WHERE room = in_room AND "floor" = "in_floor";
-        UPDATE Updates SET eid = in_eid WHERE room = in_room AND "floor" = "in_floor";
-    END IF;
-$$ LANGUAGE sql;
-
 -- generate_id
     CREATE OR REPLACE FUNCTION generate_id(OUT eid INT)
     RETURNS INT AS $$
@@ -306,16 +268,23 @@ $$ LANGUAGE sql;
     CREATE OR REPLACE PROCEDURE remove_employee
     (IN in_eid INT, IN in_date DATE)
     AS $$
-    DECLARE
-        emp_id INT;
-    BEGIN
-        SELECT eid INTO emp_id FROM Employees WHERE eid = in_eid;
-        IF eid NOT IN (SELECT eid FROM Bookers) THEN RAISE EXCEPTION 'Employee % does not exist', e_id;
-        ELSE 
-        -- edit resigned date for employee
-        -- remove employee from all related records
-        ---- Joins
-        ---- Sessions (check if booker resigns -> delete sessions)
+        IF in_eid NOT IN (SELECT eid FROM Employees) THEN 
+            -- ignore if eid does not exist
+            RAISE EXCEPTION 'Employee % does not exist.', in_eid;
+
+        ELSE
+            -- employee exists, so:
+            -- (1) update their resigned_date
+            UPDATE Employee SET resigned_date = in_date WHERE eid = in_eid;
+
+            -- (2) remove them from joined meetings after resigned date
+            DELETE FROM Joins WHERE eid = in_eid AND "date" >= in_date
+
+            IF eid IN Bookers THEN
+                -- Bookers routine: delete Sessions after resigned date
+                -- (Joining participants will ON CASCADE DELETE)
+                DELETE FROM Sessions WHERE booker_id = in_eid AND "date" >= in_date;
+        ENDIF;
     END;
     $$ LANGUAGE sql;
 
@@ -346,13 +315,11 @@ $$ LANGUAGE sql;
         ELSIF NOT is_valid_room(in_floor, in_room) THEN RETURN;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
+        ELSIF any_session_exist(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN; -- check 
 
         ELSE FOR h IN start_hour..end_hour-1 LOOP -- all or nothing
-            IF h >= 10 THEN t := hour_int_to_time(h);
-            ELSE t:= hour_int_to_time(h);
-            END IF;
-            INSERT INTO Sessions (eid, "time", "date", room, "floor") VALUES (in_eid, time, in_date, in_room, in_floor);
+            t:= hour_int_to_time(h);
+            INSERT INTO Sessions (eid, "time", "date", room, "floor") VALUES (in_eid, t, in_date, in_room, in_floor);
         END LOOP;
 
         END IF;
@@ -371,15 +338,11 @@ $$ LANGUAGE sql;
         IF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
         ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
-
-        ELSE FOR h IN start_hour..end_hour-1 LOOP
-            SELECT * INTO r FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
-            CONTINUE WHEN r IS NULL;
-            DELETE FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
-            DELETE FROM Joins WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
-        END LOOP;
-
         END IF;
+
+        FOR h IN start_hour..end_hour-1 LOOP
+            DELETE FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
+        END LOOP;
     END
     $$ LANGUAGE plpgsql;
 
@@ -411,7 +374,7 @@ $$ LANGUAGE sql;
 
             curr_start := curr_start + interval '1 hour';
         END LOOP;
-    END
+    END;
     $$ LANGUAGE plpgsql;
 
 -- leave_meeting
@@ -440,17 +403,17 @@ $$ LANGUAGE sql;
             room = in_room AND
             "floor" = in_floor AND
             "time" BETWEEN in_start AND (in_end - interval '1 min');
-    END
+    END;
     $$ LANGUAGE plpgsql;
 
 -- approve_meeting
     CREATE OR REPLACE PROCEDURE approve_meeting
     (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT) AS $$
     DECLARE
-        -- variables here
+    -- variables here
         h INT;
-        dpmt_b INT;
-        dpmt_a INT;
+        did_b INT;
+        did_a INT;
     BEGIN
         -- Simon
         -- Check if the meeting is alr approved
@@ -458,19 +421,22 @@ $$ LANGUAGE sql;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
+        END IF;
 
-        ELSE FOR h in start_hour..end_hour-1 LOOP
-            SELECT did INTO dpmt_b FROM Employees WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
-            SELECT did INTO dpmt_a FROM Employees WHERE eid = in_eid;
-            IF dpmt_b <> dpmt_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, dpmt_a, in_floor, in_room, in_date, h, dpmt_b;
-            ELSE
-                UPDATE Sessions SET approver_id = in_eid WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
+        FOR h in start_hour..end_hour-1 LOOP
+            SELECT did INTO did_b FROM Employees
+            WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
+            SELECT did INTO did_a FROM Employees WHERE eid = in_eid;
+            IF did_b <> did_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, did_a, in_floor, in_room, in_date, h, did_b;
             END IF;
+            UPDATE Sessions SET approver_id = in_eid WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
         END LOOP;
 
-        END IF;
     END;
     $$ LANGUAGE plpgsql;
+
+-- reject_meeting
+-- check if it is alr approved
 
 ------------------------------------------------------------------------
 -- HEALTH (Readapt as necessary.)
@@ -486,14 +452,11 @@ $$ LANGUAGE sql;
 
 -- contact_tracing
     CREATE OR REPLACE FUNCTION contact_tracing
-    (IN in_eid INT, IN D DATE, OUT close_contacts_eid)
+    (IN in_eid INT, IN D DATE, OUT close_contacts_eid INT)
     RETURNS SETOF RECORD AS $$
     DECLARE
         temp INT;
     BEGIN
-    /*
-    REMOVE THEM FROM D+7 BUT ONLY THE ONES IN THE FUTURE
-    */
         SELECT temperature INTO temp FROM HealthDeclarations HD 
         WHERE HD.eid = in_eid AND HD.eid = D;
 
@@ -511,15 +474,17 @@ $$ LANGUAGE sql;
             LEFT JOIN Joins J 
             ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
             WHERE J.eid = in_eid AND S.date BETWEEN D - interval '3 days' AND D;           
+        ), cte AS (
+            SELECT DISTINCT(J.eid) AS close_contacts_eid
+            FROM AffectedSessions S
+            LEFT JOIN Joins J
+            ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
         )
-        SELECT DISTINCT(J.eid) AS close_contacts_eid
-        FROM AffectedSessions S
-        LEFT JOIN Joins J
-        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
-
+        SELECT * FROM cte;
+        -- TODO: 
         -- remove from D to D+7
         DELETE FROM Joins J
-        WHERE J.date BETWEEN D AND D + interval '7 days' AND J.date AFTER CURRENT_DATE AND J.eid IN close_contacts_eid;
+        WHERE J.date BETWEEN D AND D + interval '7 days' AND J.date AFTER CURRENT_DATE AND J.eid IN cte;
 
     END;
     $$ LANGUAGE plpgsql;
@@ -545,43 +510,52 @@ $$ LANGUAGE sql;
     $$ LANGUAGE sql;
 
 -- view_booking_report
+---- Returns a table containing all meeting rooms that are booked by the given employee 
+---- as well as its approval status from the given start date onwards.
     CREATE OR REPLACE FUNCTION view_booking_report
-    (IN in_start_date DATE, IN in_eid INT)
+    (IN in_start_date DATE, IN in_eid INT, OUT out_floor INT, OUT out_room INT, OUT out_date DATE, OUT out_time TIME, OUT is_approved BOOLEAN)
     RETURNS SETOF RECORD AS $$
         --Petrick
         SELECT "floor", room, "date", "time", 
         CASE 
-            WHEN approver_id IS NOT NULL THEN TRUE
-            ELSE FALSE
+            WHEN approver_id IS NOT NULL THEN TRUE  -- is approved
+            ELSE FALSE                              -- waiting for approval
         END AS is_approved
         FROM Sessions
-        WHERE "date" > in_start_date AND booker_id = in_eid
-        ORDER BY "date" ASC, "time" ASC
+        WHERE "date" >= in_start_date AND booker_id = in_eid
+        ORDER BY "date" ASC, "time" ASC;
     $$ LANGUAGE sql;
 
 -- view_future_meeting
+---- Returns a table containing all meetings that are already approved for which 
+---- this employee is joining from the given start date onwards. (Note that 
+---- the employee need not be the one booking this meeting room.)
     CREATE OR REPLACE FUNCTION view_future_meeting
-    (IN in_start_date DATE, IN in_eid INT)
+    (IN in_start_date DATE, IN in_eid INT, OUT out_floor INT, OUT out_room INT, OUT out_date DATE, OUT out_time TIME)
     RETURNS SETOF RECORD AS $$
         --Petrick
-        SELECT "floor", room, "date", "time", 
-        FROM Joins
-        WHERE "date" > in_start_date AND eid = in_eid
-        ORDER BY "date" ASC, "time" ASC
-    END
+        SELECT J.floor, J.room, J.date, J.time
+        FROM "Sessions" S LEFT JOIN Joins J 
+            ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
+        WHERE J.date >= in_start_date AND J.eid = in_eid AND S.approver_id IS NOT NULL
+        ORDER BY J.date ASC, J.time ASC;
     $$ LANGUAGE sql;
 
 -- view_manager_report
+---- If the employee ID does not belong to a manager, the routine returns an empty table. 
+---- Otherwise, the routine returns a table containing all meeting that are booked 
+---- but not yet approved from the given start date onwards. (Note that the routine should 
+---- only return all meeting in the room with the same department as the manager.)
     CREATE OR REPLACE FUNCTION view_manager_report
-    (IN in_start_date DATE, IN in_eid INT)
+    (IN in_start_date DATE, IN in_eid INT, OUT out_floor INT, OUT out_room INT, OUT out_date DATE, OUT out_time TIME, OUT out_eid INT)
     RETURNS SETOF RECORD AS $$
         --Petrick
-        SELECT S."floor", S.room, S."date", S."time", S.booker_id
+        SELECT S.floor, S.room, S.date, S.time, S.booker_id
         FROM Sessions S, MeetingRooms R, Managers M, Employees E
         WHERE in_eid in (SELECT eid FROM M)
-        AND "date" > in_start_date
-        AND (SELECT did FROM E WHERE eid = in_eid) = (SELECT did FROM R WHERE S."floor" = R."floor" AND S."room" = R."room")
-        ORDER BY "date" ASC, "time" ASC
+        AND S.date > in_start_date
+        AND (SELECT did FROM E WHERE eid = in_eid) = (SELECT did FROM R WHERE S.floor = R.floor AND S.room = R.room)
+        ORDER BY S.date ASC, S.time ASC;
     $$ LANGUAGE plpgsql;
 
 ------------------------------------------------------------------------
