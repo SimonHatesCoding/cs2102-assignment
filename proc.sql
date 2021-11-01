@@ -293,13 +293,27 @@
 ------------------------------------------------------------------------
 -- search_room
     CREATE OR REPLACE FUNCTION search_room
-    (<param> <type>, <param> <type>, ...)
-    RETURNS <type> AS $$
+    (IN in_capacity INT, IN in_date DATE, IN in_start_hour INT, IN in_end_hour INT)
+    RETURNS TABLE(floor_num INT, room_num INT, department_id INT, capacity INT) AS $$
     DECLARE
-        -- variables here
+        r INT;
+        f INT;
+        r1 INT;
+        f1 INT;
     BEGIN
-        -- Tianle
-    END
+        IF NOT is_valid_hour(in_start_hour, in_end_hour) THEN RETURN NULL;
+        ELSIF is_past(in_date, in_start_hour) THEN RETURN NULL;
+        ELSE FOR r,f in (SELECT room, "floor" FROM MeetingRooms) LOOP
+            SELECT room INTO r1, "floor" INTO f1 FROM Sessions WHERE approver_id IS NULL AND 
+                in_capacity < (SELECT capacity FROM Updates WHERE room = r AND "floor" = f ORDER BY "date" DESC LIMIT 1);
+                -- Use helper function for capacity at a given date
+                -- Use Meeting Room data and left join Sessions
+            IF all_sessions_exist(f1, r1, in_date, in_start_hour, in_end_hour) THEN RETURN NEXT;
+            END IF;
+
+        END LOOP;
+        END IF;
+    END;
     $$ LANGUAGE plpgsql;
 
 -- book_room
