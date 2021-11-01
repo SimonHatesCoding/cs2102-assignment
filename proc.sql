@@ -452,7 +452,7 @@
 
 -- contact_tracing
     CREATE OR REPLACE FUNCTION contact_tracing
-    (IN in_eid INT, IN D DATE, OUT close_contacts_eid INT)
+    (IN in_eid INT, IN D DATE, OUT out_eid INT)
     RETURNS SETOF RECORD AS $$
     DECLARE
         temp INT;
@@ -468,24 +468,27 @@
         END IF;
 
         -- find close contact
-        WITH AffectedSessions AS (
-            SELECT S.time, S.date, S.room, S.floor
-            FROM "Sessions" S
-            LEFT JOIN Joins J 
-            ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
-            WHERE J.eid = in_eid AND S.date BETWEEN D - interval '3 days' AND D;           
-        ), cte AS (
-            SELECT DISTINCT(J.eid) AS close_contacts_eid
-            FROM AffectedSessions S
-            LEFT JOIN Joins J
-            ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
-        )
-        SELECT * FROM cte;
-        -- TODO: 
+        CREATE VIEW AffectedSessions AS
+        SELECT S.time, S.date, S.room, S.floor
+        FROM "Sessions" S
+        LEFT JOIN Joins J 
+        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
+        WHERE J.eid = in_eid AND S.date BETWEEN D - interval '3 days' AND D;           
+
+        CREATE VIEW CloseContacts AS
+        SELECT DISTINCT(J.eid)
+        FROM AffectedSessions S
+        LEFT JOIN Joins J
+        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
+
         -- remove from D to D+7
         DELETE FROM Joins J
         WHERE J.date BETWEEN D AND D + interval '7 days' AND J.date AFTER CURRENT_DATE AND J.eid IN cte;
 
+        SELECT * FROM CloseContacts;
+
+        DROP VIEW AffectedSessions;
+        DROP VIEW CloseContacts;
     END;
     $$ LANGUAGE plpgsql;
 
