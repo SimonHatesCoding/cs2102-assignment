@@ -138,11 +138,11 @@
         IF temp IS NULL THEN
             RAISE NOTICE '% has not declared temperature today, unable to decide whether employee has a fever. 
             Taking a safer approach, employee is assumed to potentially have a fever until the employee declares otherwise', in_eid;
-            RETURNS TRUE; 
+            RETURN TRUE; 
         ELSIF temp > 37.5 THEN
-            RETURNS TRUE;
+            RETURN TRUE;
         ELSE
-            RETURNS FALSE;
+            RETURN FALSE;
         END IF;
     END
     $$ LANGUAGE plpgsql;
@@ -206,21 +206,21 @@
     CREATE OR REPLACE PROCEDURE add_department
     (IN in_did INT, IN in_dname VARCHAR(50)) 
     AS $$
-        IF (in_did, in_dname) NOT IN (SELECT did, dname FROM Departments) THEN
-            INSERT INTO Departments VALUES (in_did, in_dname);
-        END IF;
+        INSERT INTO Departments VALUES (in_did, in_dname);
     $$ LANGUAGE sql;
 
 -- remove_department
     CREATE OR REPLACE PROCEDURE remove_department
-    (IN in_did1 INT, IN in_did2)
+    (IN in_did1 INT, IN in_did2 INT)
     AS $$
+    BEGIN
         IF in_did1 IN (SELECT did FROM Departments) AND 
             in_did2 IN (SELECT did FROM Departments) THEN
         UPDATE Employees SET did = in_did2 WHERE did = in_did1;
         DELETE FROM Departments WHERE did = in_did1;
         END IF;
-    $$ LANGUAGE sql;
+    END;
+    $$ LANGUAGE plpgsql;
 
 -- add_room
     CREATE OR REPLACE PROCEDURE add_room
@@ -233,12 +233,14 @@
     CREATE OR REPLACE PROCEDURE change_capacity
     (IN in_room INT, IN "in_floor" INT, IN in_capacity INT, IN in_date DATE, IN in_eid INT)
     AS $$
-        IF in_eid IN (SELECT * FROM Managers) THEN
+    BEGIN
+        IF in_eid IN (SELECT eid FROM Managers) THEN
             UPDATE Updates SET capacity = in_cap WHERE room = in_room AND "floor" = "in_floor";
             UPDATE Updates SET "date" = in_date WHERE room = in_room AND "floor" = "in_floor";
             UPDATE Updates SET eid = in_eid WHERE room = in_room AND "floor" = "in_floor";
         END IF;
-    $$ LANGUAGE sql;
+    END;
+    $$ LANGUAGE plpgsql;
 
 -- add_employee
     CREATE OR REPLACE PROCEDURE add_employee
@@ -268,6 +270,7 @@
     CREATE OR REPLACE PROCEDURE remove_employee
     (IN in_eid INT, IN in_date DATE)
     AS $$
+    BEGIN
         IF in_eid NOT IN (SELECT eid FROM Employees) THEN 
             -- ignore if eid does not exist
             RAISE EXCEPTION 'Employee % does not exist.', in_eid;
@@ -278,28 +281,43 @@
             UPDATE Employee SET resigned_date = in_date WHERE eid = in_eid;
 
             -- (2) remove them from joined meetings after resigned date
-            DELETE FROM Joins WHERE eid = in_eid AND "date" >= in_date
+            DELETE FROM Joins WHERE eid = in_eid AND "date" >= in_date;
 
-            IF eid IN Bookers THEN
+            IF in_eid IN (SELECT eid FROM Bookers) THEN
                 -- Bookers routine: delete Sessions after resigned date
                 -- (Joining participants will ON CASCADE DELETE)
                 DELETE FROM Sessions WHERE booker_id = in_eid AND "date" >= in_date;
-        ENDIF;
+            END IF;
+        END IF;
     END;
-    $$ LANGUAGE sql;
+    $$ LANGUAGE plpgsql;
 
 ------------------------------------------------------------------------
 -- CORE (Readapt as necessary.)
 ------------------------------------------------------------------------
 -- search_room
     CREATE OR REPLACE FUNCTION search_room
-    (<param> <type>, <param> <type>, ...)
-    RETURNS <type> AS $$
+    (IN in_capacity INT, IN in_date DATE, IN in_start_hour INT, IN in_end_hour INT)
+    RETURNS TABLE(floor_num INT, room_num INT, department_id INT, capacity INT) AS $$
     DECLARE
-        -- variables here
+        r INT;
+        f INT;
+        r1 INT;
+        f1 INT;
     BEGIN
-        -- Tianle
-    END
+        IF NOT is_valid_hour(in_start_hour, in_end_hour) THEN RETURN;
+        ELSIF is_past(in_date, in_start_hour) THEN RETURN;
+        ELSE FOR r,f in (SELECT room, "floor" FROM MeetingRooms) LOOP -- got bug
+            SELECT room INTO r1, "floor" INTO f1 FROM Sessions WHERE approver_id IS NULL AND 
+                in_capacity < (SELECT capacity FROM Updates WHERE room = r AND "floor" = f ORDER BY "date" DESC LIMIT 1);
+                -- Use helper function for capacity at a given date
+                -- Use Meeting Room data and left join Sessions
+            IF all_sessions_exist(f1, r1, in_date, in_start_hour, in_end_hour) THEN RETURN NEXT;
+            END IF;
+
+        END LOOP;
+        END IF;
+    END;
     $$ LANGUAGE plpgsql;
 
 -- book_room
@@ -378,9 +396,9 @@
     $$ LANGUAGE plpgsql;
 
 -- leave_meeting
-    CREATE OR REPLACE FUNCTION leave_meeting
+    CREATE OR REPLACE PROCEDURE leave_meeting
     (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT)
-    RETURNS <type> AS $$
+    AS $$
         -- Teddy
     DECLARE
         in_start TIME;
@@ -497,13 +515,13 @@
 ------------------------------------------------------------------------
 -- non-compliance
     CREATE OR REPLACE FUNCTION non_compliance
-    (IN "start" DATE, IN "end" DATE, OUT eid INT, OUT "days" INT)
+    (IN in_start DATE, IN in_end DATE, OUT eid INT, OUT "days" INT)
     RETURNS  SETOF RECORD  AS $$
         -- Teddy
         WITH Declared AS (
             SELECT eid, COUNT(temperature) AS counts
             FROM HealthDeclarations
-            WHERE "date" BETWEEN "start" AND "end"
+            WHERE "date" BETWEEN in_start AND in_end
             GROUP BY eid
         )
         SELECT E.eid AS eid, in_end - in_start + 1 - COALESCE(D.counts,0) AS "days"
@@ -538,7 +556,7 @@
     RETURNS SETOF RECORD AS $$
         --Petrick
         SELECT J.floor, J.room, J.date, J.time
-        FROM "Sessions" S LEFT JOIN Joins J 
+        FROM Sessions S LEFT JOIN Joins J 
             ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
         WHERE J.date >= in_start_date AND J.eid = in_eid AND S.approver_id IS NOT NULL
         ORDER BY J.date ASC, J.time ASC;
@@ -557,7 +575,7 @@
         FROM Sessions S, MeetingRooms R, Managers M, Employees E
         WHERE in_eid in (SELECT eid FROM M)
         AND S.date > in_start_date
-        AND (SELECT did FROM E WHERE eid = in_eid) = (SELECT did FROM R WHERE S.floor = R.floor AND S.room = R.room)
+        AND (SELECT did FROM E WHERE eid = in_eid) = (SELECT did FROM R WHERE S.floor = R.floor AND S.room = R.room) -- got bug
         ORDER BY S.date ASC, S.time ASC;
     $$ LANGUAGE plpgsql;
 
