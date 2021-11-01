@@ -71,7 +71,6 @@
 -- SELECT * FROM non_compliance('2021-09-10'::DATE, '2021-09-20'::DATE);
 -- SELECT * FROM non_compliance('2021-09-10', '2021-09-20');
 
-<<<<<<< HEAD
 CREATE OR REPLACE PROCEDURE book_room
  (IN floor_num INT, IN room_num INT, IN dt DATE, IN start_hour INT, IN end_hour INT, IN e_id INT) AS $$
 DECLARE
@@ -153,7 +152,6 @@ END
 $$ LANGUAGE plpgsql;
 
 -- INSERT INTO Departments VALUES
-=======
 -- CREATE OR REPLACE PROCEDURE book_room
 --  (IN floor_num INT, IN room_num INT, IN dt DATE, IN start_hour INT, IN end_hour INT, IN e_id INT) AS $$
 -- DECLARE
@@ -310,7 +308,6 @@ $$ LANGUAGE plpgsql;
 -- CREATE OR REPLACE PROCEDURE add_room
 --  (IN room INT, IN "floor" INT, IN rname VARCHAR(50), IN did INT)
 -- AS $$
->>>>>>> 51db01417176361b8eb1df215eb3142dfc3bdc01
 --     -- Tianle
 --     INSERT INTO MeetingRooms VALUES (room, "floor", rname, did);
 -- $$ LANGUAGE sql;
@@ -337,7 +334,6 @@ SELECT is_valid_room(10,20);
 SELECT hour_int_to_time(12);
 SELECT hour_int_to_time(3);
 
-<<<<<<< HEAD
 CREATE OR REPLACE PROCEDURE declare_health
  (IN eid INT, IN "date" DATE, IN temperature float)
 AS $$
@@ -416,5 +412,3 @@ AS $$
     -- Tianle
 $$ LANGUAGE sql;
 -- Check whether the manager changes the cap
-=======
->>>>>>> 51db01417176361b8eb1df215eb3142dfc3bdc01

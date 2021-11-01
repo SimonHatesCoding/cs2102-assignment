@@ -1149,7 +1149,7 @@ INSERT INTO Managers
     insert into MeetingRooms (room, "floor", rname, did) values (03, 10, 'Hufflepuff Meeting Room', 10);
     insert into MeetingRooms (room, "floor", rname, did) values (04, 10, 'Ravenclaw Meeting Room', 10);
     insert into MeetingRooms (room, "floor", rname, did) values (05, 10, 'Slytherin Meeting Room', 10)
-
+;
 
 --Sessions
 --(see notes.txt for list of booker_ids and aprover_ids)

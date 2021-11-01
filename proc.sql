@@ -193,13 +193,6 @@
     END;
     $$ LANGUAGE plpgsql;
 
-<<<<<<< HEAD
--- is_valid_eid
-    CREATE OR REPLACE FUNCTION is_valid_eid(IN eid INT)
-    RETURNS BOOLEAN AS $$
-    -- code here
-    $$ LANGUAGE plpgsql;
-=======
 ------------------------------------------------------------------------
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
@@ -237,7 +230,6 @@ AS $$
         UPDATE Updates SET eid = in_eid WHERE room = in_room AND "floor" = "in_floor";
     END IF;
 $$ LANGUAGE sql;
->>>>>>> Meeting-Room-data
 
 -- generate_id
     CREATE OR REPLACE FUNCTION generate_id(OUT eid INT)
@@ -414,7 +406,7 @@ $$ LANGUAGE sql;
 
     -- if everything is valid,
         curr_start := in_start;
-        WHILE curr_start < in_end
+        WHILE curr_start < in_end LOOP
             INSERT INTO Joins (eid, "time", "date", room, "floor")
             VALUES (in_eid, curr_start, in_date, in_room, in_floor);
 
@@ -604,7 +596,8 @@ $$ LANGUAGE sql;
     END;
     $$ LANGUAGE sql;
 
-    CREATE OR REPLACE TRIGGER check_core
+    DROP TRIGGER IF EXISTS check_core ON Departments;
+    CREATE TRIGGER check_core
     BEFORE DELETE OR UPDATE ON Departments
     FOR EACH ROW WHERE OLD.did IN (1,2,4,5,9) EXECUTE FUNCTION core_departments();
 
@@ -614,11 +607,13 @@ $$ LANGUAGE sql;
     BEGIN
         IF has_fever(NEW.booker_id) THEN RETURN NULL;
         ELSE RETURN NEW;
+        END IF;
     END;
     $$ LANGUAGE plpgsql;
 
+    DROP TRIGGER IF EXISTS TR_Sessions_BeforeInsert ON Sessions;
     CREATE TRIGGER TR_Sessions_BeforeInsert
-    BEFORE INSERT ON "Sessions"
+    BEFORE INSERT ON Sessions
     FOR EACH ROW EXECUTE FUNCTION fever_cannot_book();
 
 
@@ -630,6 +625,7 @@ $$ LANGUAGE sql;
     END;
     $$ LANGUAGE plpgsql;
 
+    DROP TRIGGER IF EXISTS TR_Sessions_AfterInsert ON Sessions;
     CREATE TRIGGER TR_Sessions_AfterInsert
     AFTER INSERT ON Sessions
     FOR EACH ROW EXECUTE FUNCTION booker_join_meeting();
@@ -654,12 +650,13 @@ $$ LANGUAGE sql;
     END;
     $$ LANGUAGE plpgsql;
 
+    DROP TRIGGER IF EXISTS TR_HealthDeclarations_AfterInsert On HealthDeclarations;
     CREATE TRIGGER TR_HealthDeclarations_AfterInsert
     AFTER INSERT OR UPDATE ON HealthDeclarations
     FOR EACH ROW EXECUTE FUNCTION check_fever();
 
 -- Joins
-    CREATE OR REPLACE PROCEDURE capacity_and_fever_check()
+    CREATE OR REPLACE FUNCTION capacity_and_fever_check()
     RETURNS TRIGGER AS $$
     DECLARE
         capacity INT;
@@ -676,7 +673,7 @@ $$ LANGUAGE sql;
               U.floor = NEW.floor AND
               U.date <= NEW.date
         ORDER BY U.date DESC
-        LIMIT 1
+        LIMIT 1;
 
         -- find out how many employees have already joined
         SELECT COUNT(*) INTO joined
@@ -684,7 +681,7 @@ $$ LANGUAGE sql;
         WHERE J.time = NEW.time AND
               J.date = NEW.date AND
               J.room = NEW.room AND
-              J.floor = NEW.floor
+              J.floor = NEW.floor;
         
         IF joined = capacity THEN RETURN NULL;
         END IF;
@@ -701,8 +698,10 @@ $$ LANGUAGE sql;
         END IF;
 
         RETURN NEW;
-    END
+    END;
+    $$ LANGUAGE sql;
 
+    DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert ON Joins;
     CREATE TRIGGER TR_Joins_BeforeInsert
     BEFORE INSERT ON Joins
     FOR EACH ROW EXECUTE FUNCTION capacity_and_fever_check();
