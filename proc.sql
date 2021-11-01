@@ -193,6 +193,44 @@
     END;
     $$ LANGUAGE plpgsql;
 
+------------------------------------------------------------------------
+-- BASIC (Readapt as necessary.)
+------------------------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE add_department
+(IN in_did INT, IN in_dname VARCHAR(50)) 
+AS $$
+    IF (in_did, in_dname) NOT IN (SELECT did, dname FROM Departments) THEN
+        INSERT INTO Departments VALUES (in_did, in_dname);
+    END IF;
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE PROCEDURE remove_department
+(IN in_did1 INT, IN in_did2)
+AS $$
+    IF in_did1 IN (SELECT did FROM Departments) AND 
+         in_did2 IN (SELECT did FROM Departments) THEN
+    UPDATE Employees SET did = in_did2 WHERE did = in_did1;
+    DELETE FROM Departments WHERE did = in_did1;
+    END IF;
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE PROCEDURE add_room
+ (IN in_room INT, IN "in_floor" INT, IN in_rname VARCHAR(50), IN in_did INT)
+AS $$
+    INSERT INTO MeetingRooms VALUES (in_room, "in_floor", in_rname, in_did);
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE PROCEDURE change_capacity
+(IN in_room INT, IN "in_floor" INT, IN in_capacity INT, IN in_date DATE, IN in_eid INT)
+AS $$
+    IF in_eid IN (SELECT * FROM Managers) THEN
+        UPDATE Updates SET capacity = in_cap WHERE room = in_room AND "floor" = "in_floor";
+        UPDATE Updates SET "date" = in_date WHERE room = in_room AND "floor" = "in_floor";
+        UPDATE Updates SET eid = in_eid WHERE room = in_room AND "floor" = "in_floor";
+    END IF;
+$$ LANGUAGE sql;
+
 -- generate_id
     CREATE OR REPLACE FUNCTION generate_id(OUT eid INT)
     RETURNS INT AS $$
@@ -268,23 +306,16 @@
     CREATE OR REPLACE PROCEDURE remove_employee
     (IN in_eid INT, IN in_date DATE)
     AS $$
-        IF in_eid NOT IN (SELECT eid FROM Employees) THEN 
-            -- ignore if eid does not exist
-            RAISE EXCEPTION 'Employee % does not exist.', in_eid;
-
-        ELSE
-            -- employe exists, so:
-            -- (1) update their resigned_date
-            UPDATE Employee SET resigned_date = in_date WHERE eid = in_eid;
-
-            -- (2) remove them from joined meetings after resigned date
-            DELETE FROM Joins WHERE eid = in_eid AND "date" >= in_date
-
-            IF eid IN Bookers THEN
-                -- Bookers routine: delete Sessions after resigned date
-                -- (Joining participants will ON CASCADE DELETE)
-                DELETE FROM Sessions WHERE booker_id = in_eid AND "date" >= in_date;
-        ENDIF;
+    DECLARE
+        emp_id INT;
+    BEGIN
+        SELECT eid INTO emp_id FROM Employees WHERE eid = in_eid;
+        IF eid NOT IN (SELECT eid FROM Bookers) THEN RAISE EXCEPTION 'Employee % does not exist', e_id;
+        ELSE 
+        -- edit resigned date for employee
+        -- remove employee from all related records
+        ---- Joins
+        ---- Sessions (check if booker resigns -> delete sessions)
     END;
     $$ LANGUAGE sql;
 
@@ -374,7 +405,7 @@
 
     -- if everything is valid,
         curr_start := in_start;
-        WHILE curr_start < in_end
+        WHILE curr_start < in_end LOOP
             INSERT INTO Joins (eid, "time", "date", room, "floor")
             VALUES (in_eid, curr_start, in_date, in_room, in_floor);
 
@@ -564,7 +595,8 @@
     END;
     $$ LANGUAGE plpgsql;
 
-    CREATE OR REPLACE TRIGGER check_core
+    DROP TRIGGER IF EXISTS check_core ON Departments;
+    CREATE TRIGGER check_core
     BEFORE DELETE OR UPDATE ON Departments
     FOR EACH ROW WHERE OLD.did IN (1,2,4,5,9) EXECUTE FUNCTION core_departments();
 
@@ -574,11 +606,13 @@
     BEGIN
         IF has_fever(NEW.booker_id) THEN RETURN NULL;
         ELSE RETURN NEW;
+        END IF;
     END;
     $$ LANGUAGE plpgsql;
 
+    DROP TRIGGER IF EXISTS TR_Sessions_BeforeInsert ON Sessions;
     CREATE TRIGGER TR_Sessions_BeforeInsert
-    BEFORE INSERT ON "Sessions"
+    BEFORE INSERT ON Sessions
     FOR EACH ROW EXECUTE FUNCTION fever_cannot_book();
 
 
@@ -590,6 +624,7 @@
     END;
     $$ LANGUAGE plpgsql;
 
+    DROP TRIGGER IF EXISTS TR_Sessions_AfterInsert ON Sessions;
     CREATE TRIGGER TR_Sessions_AfterInsert
     AFTER INSERT ON Sessions
     FOR EACH ROW EXECUTE FUNCTION booker_join_meeting();
@@ -614,12 +649,13 @@
     END;
     $$ LANGUAGE plpgsql;
 
+    DROP TRIGGER IF EXISTS TR_HealthDeclarations_AfterInsert On HealthDeclarations;
     CREATE TRIGGER TR_HealthDeclarations_AfterInsert
     AFTER INSERT OR UPDATE ON HealthDeclarations
     FOR EACH ROW EXECUTE FUNCTION check_fever();
 
 -- Joins
-    CREATE OR REPLACE PROCEDURE capacity_and_fever_check()
+    CREATE OR REPLACE FUNCTION capacity_and_fever_check()
     RETURNS TRIGGER AS $$
     DECLARE
         capacity INT;
@@ -636,7 +672,7 @@
               U.floor = NEW.floor AND
               U.date <= NEW.date
         ORDER BY U.date DESC
-        LIMIT 1
+        LIMIT 1;
 
         -- find out how many employees have already joined
         SELECT COUNT(*) INTO joined
@@ -644,14 +680,14 @@
         WHERE J.time = NEW.time AND
               J.date = NEW.date AND
               J.room = NEW.room AND
-              J.floor = NEW.floor
+              J.floor = NEW.floor;
         
         IF joined = capacity THEN RETURN NULL;
         END IF;
 
         -- cannot joined approved session
         SELECT S.approver_id INTO approver_id
-        FROM "Sessions" S
+        FROM Sessions S
         WHERE S.room = NEW.room AND
               S.floor = NEW.floor AND
               S.date = NEW.date AND
@@ -661,8 +697,10 @@
         END IF;
 
         RETURN NEW;
-    END
+    END;
+    $$ LANGUAGE plpgsql;
 
+    DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert ON Joins;
     CREATE TRIGGER TR_Joins_BeforeInsert
     BEFORE INSERT ON Joins
     FOR EACH ROW EXECUTE FUNCTION capacity_and_fever_check();
