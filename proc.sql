@@ -551,7 +551,7 @@
         AND "date" > in_start_date
         AND (SELECT did FROM E WHERE eid = in_eid) = (SELECT did FROM R WHERE S."floor" = R."floor" AND S."room" = R."room")
         ORDER BY "date" ASC, "time" ASC
-    $$ LANGUAGE sql;
+    $$ LANGUAGE plpgsql;
 
 ------------------------------------------------------------------------
 -- TRIGGERS
@@ -562,7 +562,7 @@
         RAISE NOTICE 'Some users are trying to delete or update the core departments';
         RETURN NULL;
     END;
-    $$ LANGUAGE sql;
+    $$ LANGUAGE plpgsql;
 
     CREATE OR REPLACE TRIGGER check_core
     BEFORE DELETE OR UPDATE ON Departments
