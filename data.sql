@@ -1264,11 +1264,11 @@ INSERT INTO Managers
     insert into Joins (eid, "time", "date", room, "floor") values (2,   '13:00', '2021-10-21', 01, 03);  
     insert into Joins (eid, "time", "date", room, "floor") values (2,   '14:00', '2021-10-21', 01, 03);  
     insert into Joins (eid, "time", "date", room, "floor") values (2,   '15:00', '2021-10-21', 01, 03); 
-    insert into Joins (eid, "time", "date", room, "floor") values (283  '13:00', '2021-10-21', 01, 03);  
+    insert into Joins (eid, "time", "date", room, "floor") values (283, '13:00', '2021-10-21', 01, 03);  
     insert into Joins (eid, "time", "date", room, "floor") values (283, '14:00', '2021-10-21', 01, 03);  
     insert into Joins (eid, "time", "date", room, "floor") values (283, '15:00', '2021-10-21', 01, 03); 
     insert into Joins (eid, "time", "date", room, "floor") values (348, '13:00', '2021-10-21', 01, 03);  
-    insert into Joins (eid, "time", "date", room, "floor") values (348  '14:00', '2021-10-21', 01, 03);  
+    insert into Joins (eid, "time", "date", room, "floor") values (348, '14:00', '2021-10-21', 01, 03);  
     insert into Joins (eid, "time", "date", room, "floor") values (348, '15:00', '2021-10-21', 01, 03); 
 
     ---- Meeting C2: 2021/10/20 16:00-19:00 at (02, 05) ** PARTIALLY APPROVED **

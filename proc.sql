@@ -687,7 +687,7 @@ $$ LANGUAGE sql;
 
         -- cannot joined approved session
         SELECT S.approver_id INTO approver_id
-        FROM "Sessions" S
+        FROM Sessions S
         WHERE S.room = NEW.room AND
               S.floor = NEW.floor AND
               S.date = NEW.date AND
@@ -698,7 +698,7 @@ $$ LANGUAGE sql;
 
         RETURN NEW;
     END;
-    $$ LANGUAGE sql;
+    $$ LANGUAGE plpgsql;
 
     DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert ON Joins;
     CREATE TRIGGER TR_Joins_BeforeInsert
