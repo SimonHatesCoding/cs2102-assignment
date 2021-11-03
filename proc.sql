@@ -199,6 +199,49 @@
         SELECT MAX(eid)+1 FROM Employees;
     $$ LANGUAGE sql;
 
+-- check_capacity
+    CREATE OR REPLACE FUNCTION (IN room INT, IN in_floor INT, IN in_date DATE)
+    RETURNS INT AS $$
+    DECLARE
+        latest_date DATE;
+        earliest_date DATE;
+        num_updates INT;
+        i INT;
+        latter DATE;
+        earlier DATE;
+    BEGIN
+        SELECT "date" INTO earliest_date 
+        FROM Updates WHERE "floor" = in_floor 
+        AND room = in_room  
+        ORDER BY "date" ASC LIMIT 1;
+
+        SELECT "date" INTO latest_date 
+        FROM Updates WHERE "floor" = in_floor 
+        AND room = in_room  
+        ORDER BY "date" DESC LIMIT 1;
+
+        SELECT COUNT(*) INTO num_updates 
+        FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
+                FROM Updates WHERE "floor" = in_floor AND room = in_room);
+
+        IF in_date < earliest_date THEN RETURN 0;
+        ELSIF in_date >= latest_date THEN RETURN QUERY 
+            SELECT capacity FROM Updates WHERE "floor" = in_floor AND room = in_room 
+            AND "date" = latest_date;
+        ELSE 
+            FOR i in num_updates+1 LOOP
+                SELECT "date" INTO latter FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
+                    FROM Updates WHERE "floor" = in_floor AND room = in_room) AS a WHERE a."rank" = i+1;
+                SELECT "date" INTO earlier FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
+                    FROM Updates WHERE "floor" = in_floor AND room = in_room) AS a WHERE a."rank" = i;
+                IF latter > in_date AND earlier < in_date THEN RETURN QUERY SELECT capacity FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
+                    FROM Updates WHERE "floor" = in_floor AND room = in_room) AS a WHERE a."rank" = i;
+                END IF;
+            END LOOP;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+
 ------------------------------------------------------------------------
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
@@ -217,6 +260,7 @@
         IF in_did1 IN (SELECT did FROM Departments) AND 
             in_did2 IN (SELECT did FROM Departments) THEN
         UPDATE Employees SET did = in_did2 WHERE did = in_did1;
+        UPDATE MeetingRooms SET did = in_did2 WHERE did = in_did1;
         DELETE FROM Departments WHERE did = in_did1;
         END IF;
     END;
@@ -290,7 +334,7 @@
             END IF;
         END IF;
     END;
-    $$ LANGUAGE plpgsql;
+    $$ LANGUAGE plpgsql;  
 
 ------------------------------------------------------------------------
 -- CORE (Readapt as necessary.)
