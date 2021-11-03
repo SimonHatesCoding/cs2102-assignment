@@ -438,6 +438,7 @@
         IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
+        ELSIF NOT any_session_exist(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
         END IF;
 
@@ -454,6 +455,34 @@
     $$ LANGUAGE plpgsql;
 
 -- reject_meeting
+    CREATE OR REPLACE PROCEDURE reject_meeting
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT) AS $$
+    DECLARE
+    -- variables here
+        h INT;
+        did_b INT;
+        did_a INT;
+    BEGIN
+        -- Simon
+        -- Check if the meeting is alr approved
+        IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to reject the meeting', in_eid;
+        ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
+        ELSIF is_past(in_date, start_hour) THEN RETURN;
+        ELSIF NOT any_session_exist(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
+        ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
+        END IF;
+
+        FOR h in start_hour..end_hour-1 LOOP
+            SELECT did INTO did_b FROM Employees
+            WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
+            SELECT did INTO did_a FROM Employees WHERE eid = in_eid;
+            IF did_b <> did_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, did_a, in_floor, in_room, in_date, h, did_b;
+            END IF;
+            DELETE FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
+        END LOOP;
+
+    END;
+    $$ LANGUAGE plpgsql;
 -- check if it is alr approved
 
 ------------------------------------------------------------------------
