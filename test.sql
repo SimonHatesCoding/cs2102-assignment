@@ -414,24 +414,28 @@
 -- -- Check whether the manager changes the cap
 
 -- CHECK if Employee 34 is resigned properly
-SELECT * FROM Employee WHERE eid = 34;
-SELECT * FROM Sessions WHERE eid = 34;
+SELECT * FROM Employees WHERE eid = 34;
+SELECT * FROM Joins WHERE eid = 34;
 CALL remove_employee(34, '2021-10-18');
-SELECT * FROM Employee WHERE eid = 34;
-SELECT * FROM Sessions WHERE eid = 34;
+SELECT * FROM Employees WHERE eid = 34;
+SELECT * FROM Joins WHERE eid = 34;
 
 -- Check if Senior 2 is resigned properly
-SELECT * FROM Employee WHERE eid = 2;
-SELECT * FROM Bookers WHERE eid = 2
-SELECT * FROM Sessions WHERE eid = 2;
-CALL remove_employee(34, '2021-10-18');
-SELECT * FROM Employee WHERE eid = 2;
-SELECT * FROM Bookers WHERE eid = 2
-SELECT * FROM Sessions WHERE eid = 2;
+SELECT * FROM Employees WHERE eid = 2;
+SELECT * FROM Bookers WHERE eid = 2;
+SELECT * FROM Sessions WHERE booker_id = 2;
+SELECT * FROM Joins WHERE eid = 2;
+CALL remove_employee(2, '2021-10-18');
+SELECT * FROM Employees WHERE eid = 2;
+SELECT * FROM Bookers WHERE eid = 2;
+SELECT * FROM Sessions WHERE booker_id = 2;
+SELECT * FROM Joins WHERE eid = 2;
 
 -- Normal calls to view
-SELECT * FROM view_booking_report(104, '2021-10-19'); 
-SELECT * FROM view_future_meeting(94,  '2021-10-19'); 
-SELECT * FROM view_manager_report(313, '2021-10-19');
+SELECT * FROM view_booking_report('2021-10-19', 104); 
+SELECT * FROM view_future_meeting('2021-10-19', 94); 
+SELECT * FROM view_manager_report('2021-10-20', 313);
+SELECT * FROM view_manager_report('2021-10-19', 323);
+
 
 
