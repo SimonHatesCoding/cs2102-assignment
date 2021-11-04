@@ -1,90 +1,65 @@
-CREATE OR REPLACE FUNCTION all_sessions_exist
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
-RETURNS BOOLEAN AS $$
-  -- Teddy
-DECLARE
-    found_sessions INT;
-    wanted_sessions INT;
-BEGIN
-    SELECT COUNT(*) INTO found_sessions
-    FROM "Sessions"
-    WHERE "date" = in_date AND
-          room = in_room AND
-          "floor" = in_floor AND
-          "time" BETWEEN in_start AND (in_end - interval '1 min');
-    
-    SELECT EXTRACT(epoch FROM in_end - in_time)/3600 INTO wanted_sessions;
 
-    -- trying to join sessions that have not been booked
-    RETURN found_sessions == wanted_sessions;
-END
-$$ LANGUAGE plpgsql;
+-- true
+select all_sessions_exist(3, 1, '2021-10-21', hour_int_to_time(13), hour_int_to_time(16));
+-- false
+select all_sessions_exist(3, 1, '2021-10-21', hour_int_to_time(13), hour_int_to_time(17));
 
-CREATE OR REPLACE FUNCTION any_session_exist
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
-RETURNS BOOLEAN AS $$
-  -- Teddy
-DECLARE
-    found_sessions INT;
-BEGIN
-    SELECT COUNT(*) INTO found_sessions
-    FROM "Sessions"
-    WHERE "date" = in_date AND
-          room = in_room AND
-          "floor" = in_floor AND
-          "time" BETWEEN in_start AND (in_end - interval '1 min');
-    
-    -- trying to join sessions that have not been booked
-    RETURN found_sessions != 0;
-END
-$$ LANGUAGE plpgsql;
+-- true
+select any_session_exist(3, 1, '2021-10-21', hour_int_to_time(13), hour_int_to_time(17));
 
-CREATE OR REPLACE FUNCTION eid_in_all_sessions
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME, IN eid INT)
-RETURNS BOOLEAN AS $$
-DECLARE
-    found_sessions INT;
-    wanted_sessions INT;
-BEGIN
-    SELECT COUNT(*) INTO found_sessions
-    FROM "Sessions" S
-    LEFT JOIN Joins J 
-    ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
-    WHERE J.date = in_date AND
-          J.room = in_room AND
-          J.floor = in_floor AND
-          J.eid = in_eid AND
-          J.time BETWEEN in_start AND (in_end - interval '1 min');
-    
-    SELECT EXTRACT(epoch FROM in_end - in_time)/3600 INTO wanted_sessions;
+-- true
+select eid_in_all_sessions(3, 1, '2021-10-21', hour_int_to_time(13), hour_int_to_time(16), 283);
+-- false
+select eid_in_all_sessions(3, 1, '2021-10-21', hour_int_to_time(13), hour_int_to_time(17), 283);
 
-    RETURN found_sessions = wanted_sessions;
-END
-$$ LANGUAGE plpgsql;
+-- true
+select any_session_approved(3, 1, '2021-10-21', hour_int_to_time(13), hour_int_to_time(17));
+-- false
+select any_session_approved(4, 2, '2021-10-23', hour_int_to_time(9), hour_int_to_time(12));
 
-CREATE OR REPLACE FUNCTION any_session_approved
- (IN in_floor INT, IN in_room INT, IN in_date DATE, IN in_start TIME, IN in_end TIME)
-RETURNS BOOLEAN AS $$
-  -- Teddy
-DECLARE
-    approver INT;
-    curr_start TIME := in_start;
-BEGIN
-    WHILE curr_start < in_end LOOP
-        approver := NULL;
-        SELECT approver_id INTO approver
-        FROM "Sessions"
-        WHERE "time" = curr_start AND
-              "date" = in_date AND
-              room = in_room AND
-              "floor" = in_floor;
-        
-        -- cannot join approved meeting
-        IF approver IS NOT NULL THEN RETURN TRUE;
-        END IF;
+-- have not declared => true
+delete from HealthDeclarations where eid = 1 AND "date" = CURRENT_DATE;
+select has_fever(1);
 
-        curr_start := curr_start + interval '1 hour';
-    END LOOP;
-    RETURN FALSE;
-END
-$$ LANGUAGE plpgsql;
+-- declared 37.5 => false
+call declare_health(1, CURRENT_DATE, 37.5);
+select has_fever(1);
+
+-- declared 37.6 => true
+call declare_health(2, CURRENT_DATE, 37.6);
+select has_fever(2);
+
+-- valid input + junior
+call add_employee('John Elton', '234-234-1234', 'junior', 1);
+-- valid input + senior
+call add_employee('Albert Elton', '234-234-1234', 'senior', 1);
+-- valid input + manager
+call add_employee('William Elton', '234-234-1234', 'manager', 1);
+
+-- invalid kind
+call add_employee('Anna', '234-234-1234', 'janitor', 1);
+-- invalid did
+call add_employee('Anna', '234-234-1234', 'janitor', 11);
+
+
+-- Join valid single session
+call join_meeting(2, 2, '2021-11-22', 10, 11, 400);
+
+-- Join valid multiple sessions
+call join_meeting(4, 2, '2021-11-23', 9, 12, 400);
+
+-- Join partially approved meetings
+call join_meeting(5, 2, '2021-11-20', 16, 19, 400);
+
+-- Join partially unavailable sessions
+call join_meeting(1, 1, '2021-11-10', 15, 20, 400);
+
+-- leave valid single meeting
+
+-- leave valid multiple meetings
+
+-- leave partially approved meetings
+
+-- leave partially available meetings
+
+-- contact tracing
