@@ -245,8 +245,9 @@
     CREATE OR REPLACE FUNCTION check_capacity(IN in_room INT, IN in_floor INT, IN in_date DATE)
     RETURNS INT AS $$ 
         SELECT U.capacity
-        FROM Updates U
-        WHERE U.date <= in_date
+        FROM MeetingRooms M
+        LEFT JOIN Updates U ON M.room = U.room AND M.floor = U.floor
+        WHERE U.date <= in_date AND U.room = in_room AND U.floor = in_floor
         ORDER BY U.date DESC
         LIMIT 1;
     $$ LANGUAGE sql;
