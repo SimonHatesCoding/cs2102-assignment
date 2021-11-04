@@ -252,6 +252,8 @@
         END IF;
     END;
     $$ LANGUAGE plpgsql;
+    -- Cannot change capacity for the past dates
+    -- If another update appears on the same day for the same room, delete the previous updates
 
 -- add_employee
     CREATE OR REPLACE PROCEDURE add_employee
@@ -321,7 +323,7 @@
         ELSE  
             SELECT a.floor INTO floor_num, a.room INTO room_num, r.did INTO department_id, 
                 check_capacity(in_room, in_floor, in_date) INTO capacity
-            FROM (SELECT "floor", room FROM Updates -- All rooms that fulfill the capacity
+            FROM (SELECT "floor", room AS room FROM Updates -- All rooms that fulfill the capacity
             WHERE in_capacity <= check_capacity(in_room, in_floor, in_date)) AS a 
             LEFT JOIN Sessions s ON a.room = s.room AND a.floor = s.floor 
             JOIN MeetingRooms r ON a.room = r.room, a.floor = r.floor
