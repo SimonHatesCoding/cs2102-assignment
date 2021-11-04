@@ -19,13 +19,13 @@
         wanted_sessions INT;
     BEGIN
         SELECT COUNT(*) INTO found_sessions
-        FROM "Sessions"
+        FROM Sessions
         WHERE "date" = in_date AND
             room = in_room AND
             "floor" = in_floor AND
             "time" BETWEEN in_start AND (in_end - interval '1 min');
         
-        SELECT EXTRACT(epoch FROM in_end - in_time)/3600 INTO wanted_sessions;
+        SELECT EXTRACT(epoch FROM in_end - in_start)/3600 INTO wanted_sessions;
 
         -- trying to join sessions that have not been booked
         IF found_sessions <> wanted_sessions THEN 
@@ -47,7 +47,7 @@
         found_sessions INT;
     BEGIN
         SELECT COUNT(*) INTO found_sessions
-        FROM "Sessions"
+        FROM Sessions
         WHERE "date" = in_date AND
             room = in_room AND
             "floor" = in_floor AND
@@ -72,7 +72,7 @@
         wanted_sessions INT;
     BEGIN
         SELECT COUNT(*) INTO found_sessions
-        FROM "Sessions" S
+        FROM Sessions S
         LEFT JOIN Joins J 
         ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
         WHERE J.date = in_date AND
@@ -105,7 +105,7 @@
         WHILE curr_start < in_end LOOP
             approver := NULL;
             SELECT approver_id INTO approver
-            FROM "Sessions"
+            FROM Sessions
             WHERE "time" = curr_start AND
                 "date" = in_date AND
                 room = in_room AND
@@ -133,7 +133,7 @@
     BEGIN
 
         SELECT temperature INTO temp FROM HealthDeclarations HD 
-        WHERE HD.eid = in_eid AND HD.eid = CURRENT_DATE;
+        WHERE HD.eid = in_eid AND HD.date = CURRENT_DATE;
 
         IF temp IS NULL THEN
             RAISE NOTICE '% has not declared temperature today, unable to decide whether employee has a fever. 
@@ -199,6 +199,49 @@
         SELECT MAX(eid)+1 FROM Employees;
     $$ LANGUAGE sql;
 
+-- check_capacity
+    CREATE OR REPLACE FUNCTION (IN room INT, IN in_floor INT, IN in_date DATE)
+    RETURNS INT AS $$
+    DECLARE
+        latest_date DATE;
+        earliest_date DATE;
+        num_updates INT;
+        i INT;
+        latter DATE;
+        earlier DATE;
+    BEGIN
+        SELECT "date" INTO earliest_date 
+        FROM Updates WHERE "floor" = in_floor 
+        AND room = in_room  
+        ORDER BY "date" ASC LIMIT 1;
+
+        SELECT "date" INTO latest_date 
+        FROM Updates WHERE "floor" = in_floor 
+        AND room = in_room  
+        ORDER BY "date" DESC LIMIT 1;
+
+        SELECT COUNT(*) INTO num_updates 
+        FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
+                FROM Updates WHERE "floor" = in_floor AND room = in_room);
+
+        IF in_date < earliest_date THEN RETURN 0;
+        ELSIF in_date >= latest_date THEN RETURN QUERY 
+            SELECT capacity FROM Updates WHERE "floor" = in_floor AND room = in_room 
+            AND "date" = latest_date;
+        ELSE 
+            FOR i in num_updates+1 LOOP
+                SELECT "date" INTO latter FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
+                    FROM Updates WHERE "floor" = in_floor AND room = in_room) AS a WHERE a."rank" = i+1;
+                SELECT "date" INTO earlier FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
+                    FROM Updates WHERE "floor" = in_floor AND room = in_room) AS a WHERE a."rank" = i;
+                IF latter > in_date AND earlier < in_date THEN RETURN QUERY SELECT capacity FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
+                    FROM Updates WHERE "floor" = in_floor AND room = in_room) AS a WHERE a."rank" = i;
+                END IF;
+            END LOOP;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+
 ------------------------------------------------------------------------
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
@@ -217,6 +260,7 @@
         IF in_did1 IN (SELECT did FROM Departments) AND 
             in_did2 IN (SELECT did FROM Departments) THEN
         UPDATE Employees SET did = in_did2 WHERE did = in_did1;
+        UPDATE MeetingRooms SET did = in_did2 WHERE did = in_did1;
         DELETE FROM Departments WHERE did = in_did1;
         END IF;
     END;
@@ -290,7 +334,7 @@
             END IF;
         END IF;
     END;
-    $$ LANGUAGE plpgsql;
+    $$ LANGUAGE plpgsql;  
 
 ------------------------------------------------------------------------
 -- CORE (Readapt as necessary.)
@@ -312,7 +356,7 @@
                 in_capacity < (SELECT capacity FROM Updates WHERE room = r AND "floor" = f ORDER BY "date" DESC LIMIT 1);
                 -- Use helper function for capacity at a given date
                 -- Use Meeting Room data and left join Sessions
-            IF all_sessions_exist(f1, r1, in_date, in_start_hour, in_end_hour) THEN RETURN NEXT;
+            IF all_sessions_exist(f1, r1, in_date, hour_int_to_time(in_start_hour), hour_int_to_time(in_end_hour)) THEN RETURN NEXT;
             END IF;
 
         END LOOP;
@@ -333,11 +377,11 @@
         ELSIF NOT is_valid_room(in_floor, in_room) THEN RETURN;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF any_session_exist(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN; -- check 
+        ELSIF any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN; -- check 
 
         ELSE FOR h IN start_hour..end_hour-1 LOOP -- all or nothing
             t:= hour_int_to_time(h);
-            INSERT INTO Sessions (eid, "time", "date", room, "floor") VALUES (in_eid, t, in_date, in_room, in_floor);
+            INSERT INTO Sessions (booker_id, "time", "date", room, "floor") VALUES (in_eid, t, in_date, in_room, in_floor);
         END LOOP;
 
         END IF;
@@ -355,7 +399,7 @@
         -- Simon
         IF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
+        ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         END IF;
 
         FOR h IN start_hour..end_hour-1 LOOP
@@ -438,7 +482,8 @@
         IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF any_session_approved(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
+        ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         END IF;
 
         FOR h in start_hour..end_hour-1 LOOP
@@ -454,6 +499,34 @@
     $$ LANGUAGE plpgsql;
 
 -- reject_meeting
+    CREATE OR REPLACE PROCEDURE reject_meeting
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT) AS $$
+    DECLARE
+    -- variables here
+        h INT;
+        did_b INT;
+        did_a INT;
+    BEGIN
+        -- Simon
+        -- Check if the meeting is alr approved
+        IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to reject the meeting', in_eid;
+        ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
+        ELSIF is_past(in_date, start_hour) THEN RETURN;
+        ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        END IF;
+
+        FOR h in start_hour..end_hour-1 LOOP
+            SELECT did INTO did_b FROM Employees
+            WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
+            SELECT did INTO did_a FROM Employees WHERE eid = in_eid;
+            IF did_b <> did_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, did_a, in_floor, in_room, in_date, h, did_b;
+            END IF;
+            DELETE FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
+        END LOOP;
+
+    END;
+    $$ LANGUAGE plpgsql;
 -- check if it is alr approved
 
 ------------------------------------------------------------------------
@@ -470,8 +543,8 @@
 
 -- contact_tracing
     CREATE OR REPLACE FUNCTION contact_tracing
-    (IN in_eid INT, IN D DATE, OUT close_contacts_eid) -- bug here (data type)
-    RETURNS SETOF RECORD AS $$
+    (IN in_eid INT, IN D DATE)
+    RETURNS TABLE(out_eid INT) AS $$
     DECLARE
         temp INT;
     BEGIN
@@ -486,24 +559,27 @@
         END IF;
 
         -- find close contact
-        WITH AffectedSessions AS (
-            SELECT S.time, S.date, S.room, S.floor
-            FROM "Sessions" S
-            LEFT JOIN Joins J 
-            ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
-            WHERE J.eid = in_eid AND S.date BETWEEN D - interval '3 days' AND D;           
-        ), cte AS (
-            SELECT DISTINCT(J.eid) AS close_contacts_eid
-            FROM AffectedSessions S
-            LEFT JOIN Joins J
-            ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
-        )
-        SELECT * FROM cte;
-        -- TODO: 
+        CREATE VIEW AffectedSessions AS
+        SELECT S.time, S.date, S.room, S.floor
+        FROM Sessions S
+        LEFT JOIN Joins J 
+        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
+        WHERE J.eid = in_eid AND S.date BETWEEN D - interval '3 days' AND D;           
+
+        CREATE VIEW CloseContacts AS
+        SELECT DISTINCT(J.eid)
+        FROM AffectedSessions S
+        LEFT JOIN Joins J
+        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
+
         -- remove from D to D+7
         DELETE FROM Joins J
-        WHERE J.date BETWEEN D AND D + interval '7 days' AND J.date AFTER CURRENT_DATE AND J.eid IN cte;
+        WHERE (J.date BETWEEN D AND D + interval '7 days') AND (J.date >= CURRENT_DATE) AND J.eid IN (SELECT * FROM CloseContacts);
 
+        RETURN QUERY SELECT * FROM CloseContacts;
+
+        DROP VIEW AffectedSessions;
+        DROP VIEW CloseContacts;
     END;
     $$ LANGUAGE plpgsql;
 
@@ -592,6 +668,7 @@
     BEGIN
         INSERT INTO Joins (eid, "time", "date", room, "floor")
         VALUES (NEW.booker_id, NEW.time, NEW.date, NEW.room, NEW.floor);
+        RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
 
@@ -610,7 +687,7 @@
 
         -- if the employee is the booker -> cancel future sessions
         IF NEW.eid IN (SELECT * FROM Bookers) THEN
-            DELETE FROM "Sessions" WHERE booker_id = NEW.eid AND "date" >= NEW.date;
+            DELETE FROM Sessions WHERE booker_id = NEW.eid AND "date" >= NEW.date;
         END IF;
 
         -- remove employee from future sessions

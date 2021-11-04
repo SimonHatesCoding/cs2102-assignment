@@ -106,7 +106,7 @@ CREATE TABLE Sessions (
     room            INT,
     "floor"         INT,
     booker_id       INT     NOT NULL,
-    approver_id     INT,
+    approver_id     INT     DEFAULT NULL,
     PRIMARY KEY ("time", "date", room, "floor"),
     FOREIGN KEY (booker_id) REFERENCES Bookers(eid),
     FOREIGN KEY (approver_id) REFERENCES Managers(eid),
