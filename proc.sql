@@ -763,7 +763,9 @@
             HAVING COUNT(J.eid) > NEW.capacity
         )
         DELETE FROM Sessions S
-        WHERE S.date = D.date AND S.time = D.time AND S.room = NEW.room AND S.floor = NEW.floor;
+        WHERE S.room = NEW.room AND S.floor = NEW.floor AND
+              (S.date, S.time) IN (SELECT * FROM D);
+        RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
 
