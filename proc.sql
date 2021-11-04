@@ -528,8 +528,6 @@
     $$ LANGUAGE sql;
 
 -- view_booking_report
----- Returns a table containing all meeting rooms that are booked by the given employee 
----- as well as its approval status from the given start date onwards.
     CREATE OR REPLACE FUNCTION view_booking_report
     (IN in_start_date DATE, IN in_eid INT, OUT out_floor INT, OUT out_room INT, OUT out_date DATE, OUT out_time TIME, OUT is_approved BOOLEAN)
     RETURNS SETOF RECORD AS $$
@@ -545,9 +543,7 @@
     $$ LANGUAGE sql;
 
 -- view_future_meeting
----- Returns a table containing all meetings that are already approved for which 
----- this employee is joining from the given start date onwards. (Note that 
----- the employee need not be the one booking this meeting room.)
+
     CREATE OR REPLACE FUNCTION view_future_meeting
     (IN in_start_date DATE, IN in_eid INT, OUT out_floor INT, OUT out_room INT, OUT out_date DATE, OUT out_time TIME)
     RETURNS SETOF RECORD AS $$
@@ -560,10 +556,6 @@
     $$ LANGUAGE sql;
 
 -- view_manager_report
----- If the employee ID does not belong to a manager, the routine returns an empty table. 
----- Otherwise, the routine returns a table containing all meeting that are booked 
----- but not yet approved from the given start date onwards. (Note that the routine should 
----- only return all meeting in the room with the same department as the manager.)
     CREATE OR REPLACE FUNCTION view_manager_report
     (IN in_start_date DATE, IN in_eid INT, OUT out_floor INT, OUT out_room INT, OUT out_date DATE, OUT out_time TIME, OUT out_eid INT)
     RETURNS SETOF RECORD AS $$
@@ -579,7 +571,6 @@
 ------------------------------------------------------------------------
 -- TRIGGERS
 ------------------------------------------------------------------------
-
 -- Sessions
     CREATE OR REPLACE FUNCTION fever_cannot_book()
     RETURNS TRIGGER AS $$
