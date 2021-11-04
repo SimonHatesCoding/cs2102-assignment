@@ -692,6 +692,7 @@
     END;
     $$ LANGUAGE plpgsql;
 
+    DROP TRIGGER IF EXISTS TR_HealthDeclarations_BeforeInsert On HealthDeclarations;
     CREATE TRIGGER TR_HealthDeclarations_BeforeInsert
     BEFORE INSERT ON HealthDeclarations
     FOR EACH ROW EXECUTE FUNCTION validate_date();
@@ -746,3 +747,21 @@
     CREATE TRIGGER TR_Joins_BeforeInsert
     BEFORE INSERT ON Joins
     FOR EACH ROW EXECUTE FUNCTION capacity_and_fever_check();
+
+
+-- Updates
+    CREATE OR REPLACE FUNCTION remove_exceeding_capacity()
+    RETURNS TRIGGER AS $$
+        DELETE *
+        FROM Sessions S
+        LEFT JOIN Joins J
+        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
+        WHERE S.date >= NEW.date AND S.room = NEW.room AND S.floor = NEW.floor
+        GROUP BY (S.date, S.time)
+        HAVING COUNT(J.eid) > NEW.capacity
+    $$ LANGUAGE sql;
+
+    DROP TRIGGER IF EXISTS TR_Updates_AfterInsert ON Updates;
+    CREATE TRIGGER TR_Updates_AfterInsert
+    AFTER INSERT ON Updates
+    FOR EACH ROW EXECUTE FUNCTION remove_exceeding_capacity();
