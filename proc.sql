@@ -242,6 +242,15 @@
     END;
     $$ LANGUAGE plpgsql;
 
+    CREATE OR REPLACE FUNCTION check_capacity(IN in_room INT, IN in_floor INT, IN in_date DATE)
+    RETURNS INT AS $$ 
+        SELECT U.capacity
+        FROM Updates U
+        WHERE U.date <= in_date
+        ORDER BY U.date DESC
+        LIMIT 1;
+    $$ LANGUAGE sql;
+
 ------------------------------------------------------------------------
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
