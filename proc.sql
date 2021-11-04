@@ -205,51 +205,10 @@
     $$ LANGUAGE sql;
 
 -- check_capacity
-    CREATE OR REPLACE FUNCTION (IN room INT, IN in_floor INT, IN in_date DATE)
-    RETURNS INT AS $$
-    DECLARE
-        latest_date DATE;
-        earliest_date DATE;
-        num_updates INT;
-        i INT;
-        latter DATE;
-        earlier DATE;
-    BEGIN
-        SELECT "date" INTO earliest_date 
-        FROM Updates WHERE "floor" = in_floor 
-        AND room = in_room  
-        ORDER BY "date" ASC LIMIT 1;
-
-        SELECT "date" INTO latest_date 
-        FROM Updates WHERE "floor" = in_floor 
-        AND room = in_room  
-        ORDER BY "date" DESC LIMIT 1;
-
-        SELECT COUNT(*) INTO num_updates 
-        FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
-                FROM Updates WHERE "floor" = in_floor AND room = in_room);
-
-        IF in_date < earliest_date THEN RETURN 0;
-        ELSIF in_date >= latest_date THEN RETURN QUERY 
-            SELECT capacity FROM Updates WHERE "floor" = in_floor AND room = in_room 
-            AND "date" = latest_date;
-        ELSE 
-            FOR i in num_updates+1 LOOP
-                SELECT "date" INTO latter FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
-                    FROM Updates WHERE "floor" = in_floor AND room = in_room) AS a WHERE a."rank" = i+1;
-                SELECT "date" INTO earlier FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
-                    FROM Updates WHERE "floor" = in_floor AND room = in_room) AS a WHERE a."rank" = i;
-                IF latter > in_date AND earlier < in_date THEN RETURN QUERY SELECT capacity FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
-                    FROM Updates WHERE "floor" = in_floor AND room = in_room) AS a WHERE a."rank" = i;
-                END IF;
-            END LOOP;
-        END IF;
-    END;
-    $$ LANGUAGE plpgsql;
-
     CREATE OR REPLACE FUNCTION check_capacity(IN in_room INT, IN in_floor INT, IN in_date DATE)
     RETURNS INT AS $$ 
         SELECT U.capacity
+        FROM Updates U
         WHERE U.date <= in_date AND U.room = in_room AND U.floor = in_floor
         ORDER BY U.date DESC
         LIMIT 1;
@@ -361,23 +320,17 @@
     CREATE OR REPLACE FUNCTION search_room
     (IN in_capacity INT, IN in_date DATE, IN in_start_hour INT, IN in_end_hour INT)
     RETURNS TABLE(floor_num INT, room_num INT, department_id INT, capacity INT) AS $$
-    DECLARE
-        r INT;
-        f INT;
-        r1 INT;
-        f1 INT;
     BEGIN
         IF NOT is_valid_hour(in_start_hour, in_end_hour) THEN RETURN;
         ELSIF is_past(in_date, in_start_hour) THEN RETURN;
-        ELSE FOR r,f in (SELECT room, "floor" FROM MeetingRooms) LOOP -- got bug
-            SELECT room INTO r1, "floor" INTO f1 FROM Sessions WHERE approver_id IS NULL AND 
-                in_capacity < (SELECT capacity FROM Updates WHERE room = r AND "floor" = f ORDER BY "date" DESC LIMIT 1);
-                -- Use helper function for capacity at a given date
-                -- Use Meeting Room data and left join Sessions
-            IF all_sessions_exist(f1, r1, in_date, hour_int_to_time(in_start_hour), hour_int_to_time(in_end_hour)) THEN RETURN NEXT;
-            END IF;
-
-        END LOOP;
+        ELSE  
+            SELECT a.floor INTO floor_num, a.room INTO room_num, r.did INTO department_id, 
+                check_capacity(in_room, in_floor, in_date) INTO capacity
+            FROM (SELECT "floor", room FROM Updates -- All rooms that fulfill the capacity
+            WHERE in_capacity <= check_capacity(in_room, in_floor, in_date)) AS a 
+            LEFT JOIN Sessions s ON a.room = s.room AND a.floor = s.floor 
+            JOIN MeetingRooms r ON a.room = r.room, a.floor = r.floor
+            WHERE NOT any_session_exist(a.floor, a.room, in_date, in_start_hour, in_end_hour);
         END IF;
     END;
     $$ LANGUAGE plpgsql;
