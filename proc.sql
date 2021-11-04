@@ -200,6 +200,51 @@
     $$ LANGUAGE sql;
 
 -- check_capacity
+<<<<<<< HEAD
+=======
+    CREATE OR REPLACE FUNCTION check_capacity (IN room INT, IN in_floor INT, IN in_date DATE)
+    RETURNS INT AS $$
+    DECLARE
+        latest_date DATE;
+        earliest_date DATE;
+        num_updates INT;
+        i INT;
+        latter DATE;
+        earlier DATE;
+    BEGIN
+        SELECT "date" INTO earliest_date 
+        FROM Updates WHERE "floor" = in_floor 
+        AND room = in_room  
+        ORDER BY "date" ASC LIMIT 1;
+
+        SELECT "date" INTO latest_date 
+        FROM Updates WHERE "floor" = in_floor 
+        AND room = in_room  
+        ORDER BY "date" DESC LIMIT 1;
+
+        SELECT COUNT(*) INTO num_updates 
+        FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
+                FROM Updates WHERE "floor" = in_floor AND room = in_room);
+
+        IF in_date < earliest_date THEN RETURN 0;
+        ELSIF in_date >= latest_date THEN RETURN QUERY 
+            SELECT capacity FROM Updates WHERE "floor" = in_floor AND room = in_room 
+            AND "date" = latest_date;
+        ELSE 
+            FOR i in num_updates+1 LOOP
+                SELECT "date" INTO latter FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
+                    FROM Updates WHERE "floor" = in_floor AND room = in_room) AS a WHERE a."rank" = i+1;
+                SELECT "date" INTO earlier FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
+                    FROM Updates WHERE "floor" = in_floor AND room = in_room) AS a WHERE a."rank" = i;
+                IF latter > in_date AND earlier < in_date THEN RETURN QUERY SELECT capacity FROM (SELECT capacity, "date", DENSE_RANK() OVER(ORDER BY "date" DESC) AS "rank" 
+                    FROM Updates WHERE "floor" = in_floor AND room = in_room) AS a WHERE a."rank" = i;
+                END IF;
+            END LOOP;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+
+>>>>>>> 1de377106b1782e7d7644860085d65273478ec69
     CREATE OR REPLACE FUNCTION check_capacity(IN in_room INT, IN in_floor INT, IN in_date DATE)
     RETURNS INT AS $$ 
         SELECT U.capacity
@@ -451,7 +496,7 @@
         IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         END IF;
 
@@ -481,7 +526,7 @@
         IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to reject the meeting', in_eid;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         END IF;
 
