@@ -200,7 +200,7 @@
     $$ LANGUAGE sql;
 
 -- check_capacity
-    CREATE OR REPLACE FUNCTION (IN room INT, IN in_floor INT, IN in_date DATE)
+    CREATE OR REPLACE FUNCTION check_capacity (IN room INT, IN in_floor INT, IN in_date DATE)
     RETURNS INT AS $$
     DECLARE
         latest_date DATE;
@@ -495,7 +495,7 @@
         IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         END IF;
 
@@ -525,7 +525,7 @@
         IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to reject the meeting', in_eid;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         END IF;
 
