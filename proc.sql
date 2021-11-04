@@ -748,6 +748,26 @@
     BEFORE INSERT ON Joins
     FOR EACH ROW EXECUTE FUNCTION capacity_and_fever_check();
 
+    CREATE OR REPLACE FUNCTION booker_left()
+    RETURNS TRIGGER AS $$
+    -- if booker leave a meeting, cancel the meeting
+    BEGIN
+        IF NEW.eid NOT IN (SELECT * FROM Bookers) THEN RETURN NULL;
+        END IF;
+
+        DELETE FROM Sessions S
+        WHERE S.booker_id = NEW.eid AND
+              S.date = NEW.date AND
+              S.time = NEW.time AND
+              S.floor = NEW.floor AND
+              S.room = NEW.room;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS TR_Joins_AfterDelete ON Joins;
+    CREATE TRIGGER TR_Joins_AfterDelete
+    AFTER DELETE ON Joins
+    FOR EACH ROW EXECUTE FUNCTION booker_left();
 
 -- Updates
     CREATE OR REPLACE FUNCTION remove_exceeding_capacity()
