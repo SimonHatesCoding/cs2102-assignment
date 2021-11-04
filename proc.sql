@@ -296,9 +296,14 @@
         eid INT := 0;
     BEGIN
         eid := generate_id();   
-        SELECT concat(ename, eid, '@hotmail.com') INTO email;
+        SELECT concat(eid, '@hotmail.com') INTO email;
         INSERT INTO Employees (eid, ename, email, did, contact) 
         VALUES (eid, in_ename, email, in_did, in_contact);
+        
+        IF kind NOT IN ('junior', 'senior', 'manager') THEN
+            RAISE NOTICE 'Invalid type of employee';
+        END IF;
+
         IF kind = 'junior' THEN INSERT INTO Juniors VALUES (eid);
         ELSIF kind = 'senior' THEN 
             INSERT INTO Bookers VALUES (eid);

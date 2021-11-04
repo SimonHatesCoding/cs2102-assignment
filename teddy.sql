@@ -231,3 +231,43 @@ select has_fever(1);
 call declare_health(2, 37.6);
 select has_fever(2);
 
+-- add_employee
+    CREATE OR REPLACE PROCEDURE add_employee
+    (IN in_ename VARCHAR(50), IN in_contact VARCHAR(50), IN kind VARCHAR(10), IN in_did INT)
+    AS $$
+    -- Teddy
+    DECLARE
+        email VARCHAR(50);
+        eid INT := 0;
+    BEGIN
+        eid := generate_id();   
+        SELECT concat(eid, '@hotmail.com') INTO email;
+        INSERT INTO Employees (eid, ename, email, did, contact) 
+        VALUES (eid, in_ename, email, in_did, in_contact);
+        
+        IF kind NOT IN ('junior', 'senior', 'manager') THEN
+            RAISE NOTICE 'Invalid type of employee';
+        END IF;
+
+        IF kind = 'junior' THEN INSERT INTO Juniors VALUES (eid);
+        ELSIF kind = 'senior' THEN 
+            INSERT INTO Bookers VALUES (eid);
+            INSERT INTO Seniors VALUES (eid);
+        ELSIF kind = 'manager' THEN
+            INSERT INTO Bookers VALUES (eid);
+            INSERT INTO Managers VALUES (eid);
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+
+-- valid input + junior
+call add_employee('John Elton', '234-234-1234', 'junior', 1);
+-- valid input + senior
+call add_employee('Albert Elton', '234-234-1234', 'senior', 1);
+-- valid input + manager
+call add_employee('William Elton', '234-234-1234', 'manager', 1);
+
+-- invalid kind
+call add_employee('Anna', '234-234-1234', 'janitor', 1);
+-- invalid did
+call add_employee('Anna', '234-234-1234', 'janitor', 11);
