@@ -55,11 +55,16 @@ call join_meeting(5, 2, '2021-11-20', 16, 19, 400);
 call join_meeting(1, 1, '2021-11-10', 15, 20, 400);
 
 -- leave valid single meeting
+call leave_meeting(2, 2, '2021-11-22', 10, 11, 400);
 
 -- leave valid multiple meetings
+call leave_meeting(4, 2, '2021-11-23', 9, 12, 400);
 
 -- leave partially approved meetings
+call leave_meeting(5, 2, '2021-11-20', 16, 19, 400);
 
 -- leave partially available meetings
+call leave_meeting(1, 1, '2021-11-10', 15, 20, 400);
 
 -- contact tracing
+

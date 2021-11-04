@@ -320,22 +320,29 @@
 ------------------------------------------------------------------------
 -- search_room
     CREATE OR REPLACE FUNCTION search_room
-    (IN in_capacity INT, IN in_date DATE, IN in_start_hour INT, IN in_end_hour INT)
+    (IN in_capacity INT, IN in_date DATE, IN start_hour INT, IN end_hour INT)
     RETURNS TABLE(floor_num INT, room_num INT, department_id INT, capacity INT) AS $$
     BEGIN
         IF NOT is_valid_hour(in_start_hour, in_end_hour) THEN RETURN;
         ELSIF is_past(in_date, in_start_hour) THEN RETURN;
-        ELSE  
-            SELECT a.floor INTO floor_num, a.room INTO room_num, r.did INTO department_id, 
-                check_capacity(in_room, in_floor, in_date) INTO capacity
-            FROM (SELECT "floor", room AS room FROM Updates -- All rooms that fulfill the capacity
-            WHERE in_capacity <= check_capacity(in_room, in_floor, in_date)) AS a 
-            LEFT JOIN Sessions s ON a.room = s.room AND a.floor = s.floor 
-            JOIN MeetingRooms r ON a.room = r.room, a.floor = r.floor
-            WHERE NOT any_session_exist(a.floor, a.room, in_date, in_start_hour, in_end_hour);
         END IF;
+            -- SELECT a.floor INTO floor_num, a.room INTO room_num, r.did INTO department_id, 
+            --     check_capacity(in_room, in_floor, in_date) INTO capacity
+            -- FROM (SELECT "floor", room AS room FROM Updates -- All rooms that fulfill the capacity
+            -- WHERE in_capacity <= check_capacity(in_room, in_floor, in_date)) AS a 
+            -- LEFT JOIN Sessions s ON a.room = s.room AND a.floor = s.floor 
+            -- JOIN MeetingRooms r ON a.room = r.room, a.floor = r.floor
+            -- WHERE NOT any_session_exist(a.floor, a.room, in_date, in_start_hour, in_end_hour);
+
+        RETURN QUERY 
+        SELECT M.floor, M.room, M.did, check_capacity(M.room, M.floor, in_date)
+        FROM MeetingRooms M
+        WHERE in_capacity <= check_capacity(M.room, M.floor, in_date) AND
+              NOT any_session_exist(M.floor, M.room, in_date, start_hour, end_hour);
     END;
     $$ LANGUAGE plpgsql;
+
+
 
 -- book_room
     CREATE OR REPLACE PROCEDURE book_room
@@ -583,8 +590,8 @@
         --Petrick
         SELECT "floor", room, "date", "time", 
         CASE 
-            WHEN approver_id IS NOT NULL THEN "Yes"  -- is approved
-            ELSE "No (Pending)"                              -- waiting for approval
+            WHEN approver_id IS NOT NULL THEN 'Yes'  -- is approved
+            ELSE 'No (Pending)'                              -- waiting for approval
         END AS is_approved
         FROM Sessions
         WHERE "date" >= in_start_date AND booker_id = in_eid
@@ -683,8 +690,9 @@
 
         RETURN NEW;
     END;
-    $$ LANGUAGE 
+    $$ LANGUAGE plpgsql;
 
+    DROP TRIGGER IF EXISTS TR_HealthDeclarations_BeforeInsert On HealthDeclarations;
     CREATE TRIGGER TR_HealthDeclarations_BeforeInsert
     BEFORE INSERT ON HealthDeclarations
     FOR EACH ROW EXECUTE FUNCTION validate_date();
@@ -739,3 +747,49 @@
     CREATE TRIGGER TR_Joins_BeforeInsert
     BEFORE INSERT ON Joins
     FOR EACH ROW EXECUTE FUNCTION capacity_and_fever_check();
+
+    CREATE OR REPLACE FUNCTION booker_left()
+    RETURNS TRIGGER AS $$
+    -- if booker leave a meeting, cancel the meeting
+    BEGIN
+        IF NEW.eid NOT IN (SELECT * FROM Bookers) THEN RETURN NULL;
+        END IF;
+
+        DELETE FROM Sessions S
+        WHERE S.booker_id = NEW.eid AND
+              S.date = NEW.date AND
+              S.time = NEW.time AND
+              S.floor = NEW.floor AND
+              S.room = NEW.room;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS TR_Joins_AfterDelete ON Joins;
+    CREATE TRIGGER TR_Joins_AfterDelete
+    AFTER DELETE ON Joins
+    FOR EACH ROW EXECUTE FUNCTION booker_left();
+
+-- Updates
+    CREATE OR REPLACE FUNCTION remove_exceeding_capacity()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        WITH D AS (
+            SELECT S.date AS "date", S.time AS "time"
+            FROM Sessions S
+            LEFT JOIN Joins J
+            ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
+            WHERE S.date >= NEW.date AND S.room = NEW.room AND S.floor = NEW.floor
+            GROUP BY (S.date, S.time)
+            HAVING COUNT(J.eid) > NEW.capacity
+        )
+        DELETE FROM Sessions S
+        WHERE S.room = NEW.room AND S.floor = NEW.floor AND
+              (S.date, S.time) IN (SELECT * FROM D);
+        RETURN NULL;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS TR_Updates_AfterInsert ON Updates;
+    CREATE TRIGGER TR_Updates_AfterInsert
+    AFTER INSERT ON Updates
+    FOR EACH ROW EXECUTE FUNCTION remove_exceeding_capacity();

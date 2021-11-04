@@ -131,7 +131,7 @@ CREATE TABLE Joins (
 CREATE TABLE Updates (
     -- Simon
     eid         INT     REFERENCES Managers(eid),
-    "date"      DATE DEFAULT DATE('2020-10-01'),
+    "date"      DATE    DEFAULT DATE('2020-10-01'),
     "floor"     INT,
     room        INT,
     capacity    INT     NOT NULL,
