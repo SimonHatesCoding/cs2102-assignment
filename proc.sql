@@ -196,7 +196,12 @@
 -- generate_id
     CREATE OR REPLACE FUNCTION generate_id(OUT eid INT)
     RETURNS INT AS $$
-        SELECT MAX(eid)+1 FROM Employees;
+        SELECT 
+        CASE 
+            WHEN MAX(eid) IS NULL THEN 1
+            ELSE MAX(eid) + 1
+        END 
+        FROM Employees;
     $$ LANGUAGE sql;
 
 -- check_capacity
@@ -423,7 +428,7 @@
 
 -- join_meeting
     CREATE OR REPLACE PROCEDURE join_meeting
-    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour TIME, IN end_hour TIME, IN in_eid INT)
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT)
     AS $$
     -- Teddy
     DECLARE
@@ -724,6 +729,20 @@
     CREATE TRIGGER TR_HealthDeclarations_AfterInsert
     AFTER INSERT OR UPDATE ON HealthDeclarations
     FOR EACH ROW EXECUTE FUNCTION check_fever();
+
+    CREATE OR REPLACE FUNCTION validate_date()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        IF NEW.date > CURRENT_DATE THEN RETURN NULL;
+        END IF;
+
+        RETURN NEW;
+    END;
+    $$ LANGUAGE 
+
+    CREATE TRIGGER TR_HealthDeclarations_BeforeInsert
+    BEFORE INSERT ON HealthDeclarations
+    FOR EACH ROW EXECUTE FUNCTION validate_date();
 
 -- Joins
     CREATE OR REPLACE FUNCTION capacity_and_fever_check()
