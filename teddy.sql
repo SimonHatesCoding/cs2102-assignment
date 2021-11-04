@@ -271,3 +271,41 @@ call add_employee('William Elton', '234-234-1234', 'manager', 1);
 call add_employee('Anna', '234-234-1234', 'janitor', 1);
 -- invalid did
 call add_employee('Anna', '234-234-1234', 'janitor', 11);
+
+
+-- join_meeting
+    CREATE OR REPLACE PROCEDURE join_meeting
+    (IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour TIME, IN end_hour TIME, IN in_eid INT)
+    AS $$
+    -- Teddy
+    DECLARE
+        in_start TIME;
+        in_end TIME;
+        curr_start TIME;
+    BEGIN
+        in_start := hour_int_to_time(start_hour);
+        in_end := hour_int_to_time(end_hour);
+
+        IF NOT is_valid_hour(start_hour, end_hour) OR 
+           is_past(in_date, start_hour) OR
+           NOT is_valid_room(in_floor, in_room) OR
+           NOT all_sessions_exist(in_floor, in_room, in_date, in_start, in_end) OR
+           any_session_approved(in_floor, in_room, in_date, in_start, in_end) THEN RETURN;
+        END IF;
+
+    -- if everything is valid,
+        curr_start := in_start;
+        WHILE curr_start < in_end LOOP
+            INSERT INTO Joins (eid, "time", "date", room, "floor")
+            VALUES (in_eid, curr_start, in_date, in_room, in_floor);
+
+            curr_start := curr_start + interval '1 hour';
+        END LOOP;
+    END;
+    $$ LANGUAGE plpgsql;
+
+-- Join valid sessions
+
+-- Join partially approved meetings
+
+-- Join unavailable sessions
