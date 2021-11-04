@@ -590,8 +590,8 @@
         --Petrick
         SELECT "floor", room, "date", "time", 
         CASE 
-            WHEN approver_id IS NOT NULL THEN "Yes"  -- is approved
-            ELSE "No (Pending)"                              -- waiting for approval
+            WHEN approver_id IS NOT NULL THEN 'Yes'  -- is approved
+            ELSE 'No (Pending)'                              -- waiting for approval
         END AS is_approved
         FROM Sessions
         WHERE "date" >= in_start_date AND booker_id = in_eid
@@ -752,14 +752,20 @@
 -- Updates
     CREATE OR REPLACE FUNCTION remove_exceeding_capacity()
     RETURNS TRIGGER AS $$
-        DELETE *
-        FROM Sessions S
-        LEFT JOIN Joins J
-        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
-        WHERE S.date >= NEW.date AND S.room = NEW.room AND S.floor = NEW.floor
-        GROUP BY (S.date, S.time)
-        HAVING COUNT(J.eid) > NEW.capacity
-    $$ LANGUAGE sql;
+    BEGIN
+        WITH D AS (
+            SELECT S.date AS "date", S.time AS "time"
+            FROM Sessions S
+            LEFT JOIN Joins J
+            ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
+            WHERE S.date >= NEW.date AND S.room = NEW.room AND S.floor = NEW.floor
+            GROUP BY (S.date, S.time)
+            HAVING COUNT(J.eid) > NEW.capacity
+        )
+        DELETE FROM Sessions S
+        WHERE S.date = D.date AND S.time = D.time AND S.room = NEW.room AND S.floor = NEW.floor;
+    END;
+    $$ LANGUAGE plpgsql;
 
     DROP TRIGGER IF EXISTS TR_Updates_AfterInsert ON Updates;
     CREATE TRIGGER TR_Updates_AfterInsert
