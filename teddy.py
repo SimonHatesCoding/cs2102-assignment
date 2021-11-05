@@ -68,16 +68,28 @@ a = """
 CALL approve_meeting(floor, room, date, start_hour, end_hour, eid)
 '''
 
-for line in a.splitlines():
-    line = line.strip()
-    if "null" in line: continue
-    if "insert into Sessions" not in line: continue
+def approve(line):
+    if "null" in line: return
     end = line.index(";")
     line = line[:end]
-    # print(line)
     values_idx = line.index("values")
     values = line[values_idx + 8 :-1]
     t, d, r, f, _, approver = values.split(", ")
     out = 'UPDATE Sessions SET approver_id = {} WHERE "floor" = {} AND "room" = {} AND "date" = {} AND "time" = {};'.format(approver, f, r, d, t)
     print(out)
-    
+
+def booker_joins(line):
+    end = line.index(";")
+    line = line[:end]
+    values_idx = line.index("values")
+    values = line[values_idx + 8 :-1]
+    t, d, r, f, booker, _ = values.split(", ")
+    out = '    insert into Joins (eid, "time", "date", room, "floor") values ({},  {}, {}, {}, {});'.format(booker, t, d, r, f)
+    print(out)
+
+
+for line in a.splitlines():
+    line = line.strip()
+    if "insert into Sessions" not in line: continue
+    booker_joins(line)
+
