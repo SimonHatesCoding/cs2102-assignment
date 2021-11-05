@@ -410,7 +410,7 @@
         FOR h IN start_hour..end_hour-1 LOOP
             DELETE FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
         END LOOP;
-    END
+    END;
     $$ LANGUAGE plpgsql;
 
 -- join_meeting
@@ -487,7 +487,7 @@
         ELSIF is_past(in_date, start_hour) THEN RETURN;
         ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
-        ELSIF NOT check_same_dpmt(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
+        ELSIF NOT check_same_dpmt(in_floor, in_room, in_date, start_hour, end_hour, in_eid) THEN RETURN;
         END IF;
 
         FOR h in start_hour..end_hour-1 LOOP
@@ -513,7 +513,7 @@
         ELSIF is_past(in_date, start_hour) THEN RETURN;
         ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
-        ELSIF NOT check_same_dpmt(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
+        ELSIF NOT check_same_dpmt(in_floor, in_room, in_date, start_hour, end_hour, in_eid) THEN RETURN;
         END IF;
 
         FOR h in start_hour..end_hour-1 LOOP
