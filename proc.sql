@@ -364,7 +364,8 @@
         SELECT M.floor, M.room, M.did, check_capacity(M.room, M.floor, in_date)
         FROM MeetingRooms M
         WHERE in_capacity <= check_capacity(M.room, M.floor, in_date) AND
-              NOT any_session_exist(M.floor, M.room, in_date, start_hour, end_hour);
+              NOT any_session_exist(M.floor, M.room, in_date, hour_int_to_time(start_hour), 
+                hour_int_to_time(end_hour));
     END;
     $$ LANGUAGE plpgsql;
 
