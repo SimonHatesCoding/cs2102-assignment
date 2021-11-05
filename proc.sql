@@ -234,6 +234,18 @@
     END;
     $$ LANGUAGE plpgsql;
 
+-- is_resigned
+    CREATE OR REPLACE FUNCTION is_resigned(IN in_eid INT)
+    RETURNS BOOLEAN AS $$
+    BEGIN
+        IF (SELECT resigned_date FROM Employees WHERE eid = in_eid) IS NOT NULL
+            THEN RAISE NOTICE '% is already resigned', in_eid;
+            RETURN TRUE;
+        END IF;
+        RETURN FALSE;
+    END;
+    $$ LANGUAGE plpgsql;
+
 ------------------------------------------------------------------------
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
@@ -634,6 +646,7 @@
     RETURNS TRIGGER AS $$
     BEGIN
         IF has_fever(NEW.booker_id) THEN RETURN NULL;
+        ELSIF is_resigned(NEW.booker_id) THEN RETURN NULL;
         ELSIF NEW.booker_id NOT IN (SELECT eid FROM Bookers) THEN RAISE NOTICE 'Employee % is not authorized to make bookings', in_eid;
         RETURN NULL;
         ELSE RETURN NEW;
@@ -644,7 +657,7 @@
     DROP TRIGGER IF EXISTS TR_Sessions_BeforeInsert ON Sessions;
     CREATE TRIGGER TR_Sessions_BeforeInsert
     BEFORE INSERT ON Sessions
-    FOR EACH ROW EXECUTE FUNCTION fever_cannot_book();
+    FOR EACH ROW EXECUTE FUNCTION cannot_book();
 
 
     CREATE OR REPLACE FUNCTION booker_join_meeting()
@@ -661,7 +674,7 @@
     AFTER INSERT ON Sessions
     FOR EACH ROW EXECUTE FUNCTION booker_join_meeting();
 
-    CREATE OR REPLACE FUNCTION check_approval()
+    CREATE OR REPLACE FUNCTION cannot_approve()
     RETURNS TRIGGER AS $$
     DECLARE
         booker_did INT;
@@ -670,6 +683,7 @@
         IF NEW.approver_id NOT IN (SELECT eid FROM Managers) THEN 
             RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
             RETURN OLD;
+        ELSIF is_resigned(NEW.approver_id) THEN RETURN NULL;
         END IF;
 
         SELECT did INTO booker_did FROM Employees
@@ -690,7 +704,7 @@
     DROP TRIGGER IF EXISTS TR_Sessions_BeforeUpdate ON Sessions;
     CREATE TRIGGER TR_Sessions_BeforeUpdate
     BEFORE UPDATE ON Sessions
-    FOR EACH ROW EXECUTE FUNCTION check_approval();
+    FOR EACH ROW EXECUTE FUNCTION cannot_approve();
 
 -- HealthDeclarations
     CREATE OR REPLACE FUNCTION check_fever()
@@ -734,7 +748,7 @@
     FOR EACH ROW EXECUTE FUNCTION validate_date();
 
 -- Joins
-    CREATE OR REPLACE FUNCTION capacity_and_fever_check()
+    CREATE OR REPLACE FUNCTION cannot_join()
     RETURNS TRIGGER AS $$
     DECLARE
         capacity INT;
@@ -742,6 +756,7 @@
         approver_id INT;
     BEGIN
         IF has_fever(NEW.eid) THEN RETURN NULL;
+        ELSIF is_resigned(NEW.eid) THEN RETURN NULL;
         END IF;
 
         -- find out the capacity of the room for that day
@@ -782,7 +797,7 @@
     DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert ON Joins;
     CREATE TRIGGER TR_Joins_BeforeInsert
     BEFORE INSERT ON Joins
-    FOR EACH ROW EXECUTE FUNCTION capacity_and_fever_check();
+    FOR EACH ROW EXECUTE FUNCTION cannot_join();
 
     CREATE OR REPLACE FUNCTION booker_leave_meeting()
     RETURNS TRIGGER AS $$
@@ -829,3 +844,16 @@
     CREATE TRIGGER TR_Updates_AfterInsert
     AFTER INSERT ON Updates
     FOR EACH ROW EXECUTE FUNCTION remove_exceeding_capacity();
+
+    CREATE OR REPLACE FUNCTION cannot_update()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        IF is_resigned(NEW.approver_id) THEN RETURN NULL;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+    
+    DROP TRIGGER IF EXISTS TR_Updates_BeforeUpdate ON Updates;
+    CREATE TRIGGER TR_Updates_BeforeUpdate
+    BEFORE UPDATE ON Updates
+    FOR EACH ROW EXECUTE FUNCTION cannot_update();
