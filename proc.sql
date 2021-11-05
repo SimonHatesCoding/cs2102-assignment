@@ -326,13 +326,6 @@
         IF NOT is_valid_hour(in_start_hour, in_end_hour) THEN RETURN;
         ELSIF is_past(in_date, in_start_hour) THEN RETURN;
         END IF;
-            -- SELECT a.floor INTO floor_num, a.room INTO room_num, r.did INTO department_id, 
-            --     check_capacity(in_room, in_floor, in_date) INTO capacity
-            -- FROM (SELECT "floor", room AS room FROM Updates -- All rooms that fulfill the capacity
-            -- WHERE in_capacity <= check_capacity(in_room, in_floor, in_date)) AS a 
-            -- LEFT JOIN Sessions s ON a.room = s.room AND a.floor = s.floor 
-            -- JOIN MeetingRooms r ON a.room = r.room, a.floor = r.floor
-            -- WHERE NOT any_session_exist(a.floor, a.room, in_date, in_start_hour, in_end_hour);
 
         RETURN QUERY 
         SELECT M.floor, M.room, M.did, check_capacity(M.room, M.floor, in_date)
@@ -655,6 +648,37 @@
     CREATE TRIGGER TR_Sessions_AfterInsert
     AFTER INSERT ON Sessions
     FOR EACH ROW EXECUTE FUNCTION booker_join_meeting();
+
+    CREATE OR REPLACE FUNCTION check_approval()
+    RETURNS TRIGGER AS $$
+    DECLARE
+        booker_did INT;
+        approver_did INT;
+    BEGIN
+        IF NEW.approver_id NOT IN (SELECT eid FROM Managers) THEN 
+            RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
+            RETURN OLD;
+        END IF;
+
+        SELECT did INTO booker_did FROM Employees
+        WHERE eid = NEW.booker_id;
+        SELECT did INTO approver_did FROM Employees 
+        WHERE eid = NEW.approver_id;
+
+        IF booker_did <> approver_did THEN 
+            RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', 
+                in_eid, did_a, in_floor, in_room, in_date, h, did_b;
+            RETURN OLD;
+        END IF;
+        
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS TR_Sessions_BeforeUpdate ON Sessions;
+    CREATE TRIGGER TR_Sessions_BeforeUpdate
+    BEFORE UPDATE ON Sessions
+    FOR EACH ROW EXECUTE FUNCTION check_approval();
 
 -- HealthDeclarations
     CREATE OR REPLACE FUNCTION check_fever()
