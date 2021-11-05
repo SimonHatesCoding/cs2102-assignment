@@ -267,18 +267,19 @@
 
 -- change_capacity
     CREATE OR REPLACE PROCEDURE change_capacity
-    (IN in_room INT, IN "in_floor" INT, IN in_capacity INT, IN in_date DATE, IN in_eid INT)
+    (IN in_room INT, IN in_floor INT, IN in_capacity INT, IN in_date DATE, IN in_eid INT)
     AS $$
     BEGIN
-        IF in_eid IN (SELECT eid FROM Managers) THEN
-            UPDATE Updates SET capacity = in_cap WHERE room = in_room AND "floor" = "in_floor";
-            UPDATE Updates SET "date" = in_date WHERE room = in_room AND "floor" = "in_floor";
-            UPDATE Updates SET eid = in_eid WHERE room = in_room AND "floor" = "in_floor";
-        END IF;
+        IF is_past(in_date, 0) THEN NULL;
+        ELSIF NOT in_eid IN (SELECT eid FROM Managers) THEN NULL;
+        ELSIF in_date IN (SELECT "date" FROM Updates WHERE room = in_room AND "floor" = "in_floor") THEN 
+            UPDATE Updates SET "date" = in_date, capacity = in_capacity 
+            WHERE room = in_room AND "floor" = "in_floor";
+        ELSE
+            INSERT INTO Updates VALUES(in_eid, in_date, in_floor, in_room, in_capacity);  
+        END IF; 
     END;
     $$ LANGUAGE plpgsql;
-    -- Cannot change capacity for the past dates
-    -- If another update appears on the same day for the same room, delete the previous updates
 
 -- add_employee
     CREATE OR REPLACE PROCEDURE add_employee
@@ -343,8 +344,8 @@
     (IN in_capacity INT, IN in_date DATE, IN start_hour INT, IN end_hour INT)
     RETURNS TABLE(floor_num INT, room_num INT, department_id INT, capacity INT) AS $$
     BEGIN
-        IF NOT is_valid_hour(in_start_hour, in_end_hour) THEN RETURN;
-        ELSIF is_past(in_date, in_start_hour) THEN RETURN;
+        IF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
+        ELSIF is_past(in_date, start_hour) THEN RETURN;
         END IF;
 
         RETURN QUERY 
