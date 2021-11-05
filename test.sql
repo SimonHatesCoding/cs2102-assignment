@@ -360,13 +360,9 @@ DELETE FROM MeetingRooms WHERE room = 03 AND "floor" = 11;
 DELETE FROM MeetingRooms WHERE room = 04 AND "floor" = 11;
 DELETE FROM MeetingRooms WHERE room = 05 AND "floor" = 11;
 
--- insert into Updates (eid, "date", room, "floor", capacity) values (20, '2020-10-05', 01, 01, 3);
--- insert into Updates (eid, "date", room, "floor", capacity) values (20, '2020-10-05', 01, 01, 3);
--- insert into Updates (eid, "date", room, "floor", capacity) values (20, '2020-10-05', 01, 01, 3);
--- insert into Updates (eid, "date", room, "floor", capacity) values (20, '2020-10-05', 01, 01, 3);
--- insert into Updates (eid, "date", room, "floor", capacity) values (20, '2020-10-05', 01, 01, 3);
-
 CALL change_capacity(01,01,3,'2021-11-06',20);
 CALL change_capacity(02,01,3,'2021-11-06',01); -- Not Manager
 CALL change_capacity(01,01,3,'2020-10-05',20); -- In the past
 CALL change_capacity(02,01,3,'2021-11-06',120); -- Wrong did
+
+SELECT search_room(3, '2021-11-19', 9, 10);
