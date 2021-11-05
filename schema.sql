@@ -107,7 +107,7 @@ CREATE TABLE Sessions (
     "floor"         INT,
     booker_id       INT     NOT NULL,
     approver_id     INT     DEFAULT NULL,
-    PRIMARY KEY ("time", "date", room, "floor"),
+    PRIMARY KEY (booker_id, "time", "date", room, "floor"),
     FOREIGN KEY (booker_id) REFERENCES Bookers(eid),
     FOREIGN KEY (approver_id) REFERENCES Managers(eid),
     FOREIGN KEY (room, "floor") REFERENCES MeetingRooms(room, "floor") ON DELETE CASCADE
