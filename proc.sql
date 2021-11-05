@@ -748,7 +748,7 @@
     BEFORE INSERT ON Joins
     FOR EACH ROW EXECUTE FUNCTION capacity_and_fever_check();
 
-    CREATE OR REPLACE FUNCTION booker_left()
+    CREATE OR REPLACE FUNCTION booker_leave_meeting()
     RETURNS TRIGGER AS $$
     -- if booker leave a meeting, cancel the meeting
     BEGIN
@@ -767,7 +767,7 @@
     DROP TRIGGER IF EXISTS TR_Joins_AfterDelete ON Joins;
     CREATE TRIGGER TR_Joins_AfterDelete
     AFTER DELETE ON Joins
-    FOR EACH ROW EXECUTE FUNCTION booker_left();
+    FOR EACH ROW EXECUTE FUNCTION booker_leave_meeting();
 
 -- Updates
     CREATE OR REPLACE FUNCTION remove_exceeding_capacity()
