@@ -630,10 +630,12 @@
 -- TRIGGERS
 ------------------------------------------------------------------------
 -- Sessions
-    CREATE OR REPLACE FUNCTION fever_cannot_book()
+    CREATE OR REPLACE FUNCTION cannot_book()
     RETURNS TRIGGER AS $$
     BEGIN
         IF has_fever(NEW.booker_id) THEN RETURN NULL;
+        ELSIF NEW.booker_id NOT IN (SELECT eid FROM Bookers) THEN RAISE NOTICE 'Employee % is not authorized to make bookings', in_eid;
+        RETURN NULL;
         ELSE RETURN NEW;
         END IF;
     END;
