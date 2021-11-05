@@ -214,6 +214,26 @@
         LIMIT 1;
     $$ LANGUAGE sql;
 
+-- check_same_dpmt
+    CREATE OR REPLACE FUNCTION check_same_dpmt(IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT)
+    RETURNS BOOLEAN AS $$
+    DECLARE
+        did_a INT;
+        did_b INT;
+        h INT;
+    BEGIN
+        FOR h in start_hour..end_hour-1 LOOP
+            SELECT did INTO did_b FROM Employees
+            WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
+            SELECT did INTO did_a FROM Employees WHERE eid = in_eid;
+            IF did_b <> did_a THEN RAISE NOTICE '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, did_a, in_floor, in_room, in_date, h, did_b;
+            RETURN FALSE;
+            END IF;
+        RETURN TRUE;
+        END LOOP;
+    END;
+    $$ LANGUAGE plpgsql;
+
 ------------------------------------------------------------------------
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
@@ -447,8 +467,6 @@
     DECLARE
     -- variables here
         h INT;
-        did_b INT;
-        did_a INT;
     BEGIN
         -- Simon
         -- Check if the meeting is alr approved
@@ -457,14 +475,10 @@
         ELSIF is_past(in_date, start_hour) THEN RETURN;
         ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF NOT check_same_dpmt(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
         END IF;
 
         FOR h in start_hour..end_hour-1 LOOP
-            SELECT did INTO did_b FROM Employees
-            WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
-            SELECT did INTO did_a FROM Employees WHERE eid = in_eid;
-            IF did_b <> did_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, did_a, in_floor, in_room, in_date, h, did_b;
-            END IF;
             UPDATE Sessions SET approver_id = in_eid WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
         END LOOP;
 
@@ -487,14 +501,10 @@
         ELSIF is_past(in_date, start_hour) THEN RETURN;
         ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF NOT check_same_dpmt(in_floor, in_room, in_date, start_hour, end_hour) THEN RETURN;
         END IF;
 
         FOR h in start_hour..end_hour-1 LOOP
-            SELECT did INTO did_b FROM Employees
-            WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
-            SELECT did INTO did_a FROM Employees WHERE eid = in_eid;
-            IF did_b <> did_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, did_a, in_floor, in_room, in_date, h, did_b;
-            END IF;
             DELETE FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
         END LOOP;
 
