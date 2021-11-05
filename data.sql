@@ -999,6 +999,54 @@ INSERT INTO Managers
 ------------------------------------------------------------------------
 
 --Joins (Bookers automatically joined via trigger.)
+    -- bookers join the sessions they created
+    insert into Joins (eid, "time", "date", room, "floor") values (110,  '09:00', '2021-11-19', 01, 01);
+    insert into Joins (eid, "time", "date", room, "floor") values (1,  '10:00', '2021-11-19', 02, 02);  
+    insert into Joins (eid, "time", "date", room, "floor") values (102,  '11:00', '2021-11-19', 03, 03);
+    insert into Joins (eid, "time", "date", room, "floor") values (203,  '12:00', '2021-11-20', 04, 04);
+    insert into Joins (eid, "time", "date", room, "floor") values (304,  '13:00', '2021-11-20', 05, 05);
+    insert into Joins (eid, "time", "date", room, "floor") values (205,  '14:00', '2021-11-20', 01, 06);
+    insert into Joins (eid, "time", "date", room, "floor") values (206,  '15:00', '2021-11-20', 02, 07);
+    insert into Joins (eid, "time", "date", room, "floor") values (207,  '16:00', '2021-11-21', 03, 08);
+    insert into Joins (eid, "time", "date", room, "floor") values (8,  '17:00', '2021-11-21', 04, 09);  
+    insert into Joins (eid, "time", "date", room, "floor") values (109,  '18:00', '2021-11-21', 05, 10);
+    insert into Joins (eid, "time", "date", room, "floor") values (109,  '14:00', '2021-11-05', 05, 10);
+    insert into Joins (eid, "time", "date", room, "floor") values (109,  '14:00', '2021-11-06', 05, 10);
+    insert into Joins (eid, "time", "date", room, "floor") values (109,  '14:00', '2021-11-08', 05, 10);
+    insert into Joins (eid, "time", "date", room, "floor") values (109,  '14:00', '2021-11-09', 05, 10);
+    insert into Joins (eid, "time", "date", room, "floor") values (109,  '14:00', '2021-11-10', 05, 10);
+    insert into Joins (eid, "time", "date", room, "floor") values (109,  '14:00', '2021-11-11', 05, 10);
+    insert into Joins (eid, "time", "date", room, "floor") values (102,  '14:00', '2021-11-13', 03, 03);
+    insert into Joins (eid, "time", "date", room, "floor") values (207,  '14:00', '2021-11-16', 03, 08);
+    insert into Joins (eid, "time", "date", room, "floor") values (207,  '14:00', '2021-11-17', 03, 08);
+    insert into Joins (eid, "time", "date", room, "floor") values (102,  '14:00', '2021-11-18', 03, 03);
+    insert into Joins (eid, "time", "date", room, "floor") values (111,  '09:00', '2021-11-21', 01, 02);
+    insert into Joins (eid, "time", "date", room, "floor") values (313,  '10:00', '2021-11-20', 02, 04);
+    insert into Joins (eid, "time", "date", room, "floor") values (215,  '11:00', '2021-11-20', 03, 06);
+    insert into Joins (eid, "time", "date", room, "floor") values (17,  '12:00', '2021-11-19', 04, 08); 
+    insert into Joins (eid, "time", "date", room, "floor") values (19,  '13:00', '2021-11-19', 05, 10); 
+    insert into Joins (eid, "time", "date", room, "floor") values (2,  '13:00', '2021-11-21', 01, 03);  
+    insert into Joins (eid, "time", "date", room, "floor") values (2,  '14:00', '2021-11-21', 01, 03);  
+    insert into Joins (eid, "time", "date", room, "floor") values (2,  '15:00', '2021-11-21', 01, 03);  
+    insert into Joins (eid, "time", "date", room, "floor") values (104,  '16:00', '2021-11-20', 02, 05);
+    insert into Joins (eid, "time", "date", room, "floor") values (104,  '17:00', '2021-11-20', 02, 05);
+    insert into Joins (eid, "time", "date", room, "floor") values (104,  '18:00', '2021-11-20', 02, 05);
+    insert into Joins (eid, "time", "date", room, "floor") values (308,  '14:00', '2021-11-19', 03, 09);
+    insert into Joins (eid, "time", "date", room, "floor") values (308,  '15:00', '2021-11-19', 03, 09);
+    insert into Joins (eid, "time", "date", room, "floor") values (205,  '16:00', '2021-11-19', 04, 06);
+    insert into Joins (eid, "time", "date", room, "floor") values (205,  '17:00', '2021-11-19', 04, 06);
+    insert into Joins (eid, "time", "date", room, "floor") values (110,  '09:00', '2021-11-22', 01, 01);
+    insert into Joins (eid, "time", "date", room, "floor") values (1,  '10:00', '2021-11-22', 02, 02);
+    insert into Joins (eid, "time", "date", room, "floor") values (102,  '11:00', '2021-11-22', 03, 03);
+    insert into Joins (eid, "time", "date", room, "floor") values (203,  '12:00', '2021-11-22', 04, 04);
+    insert into Joins (eid, "time", "date", room, "floor") values (304,  '13:00', '2021-11-22', 05, 05);
+    insert into Joins (eid, "time", "date", room, "floor") values (303,  '09:00', '2021-11-23', 02, 04);
+    insert into Joins (eid, "time", "date", room, "floor") values (303,  '10:00', '2021-11-23', 02, 04);
+    insert into Joins (eid, "time", "date", room, "floor") values (303,  '11:00', '2021-11-23', 02, 04);
+    insert into Joins (eid, "time", "date", room, "floor") values (110,  '14:00', '2021-11-23', 04, 01);
+    insert into Joins (eid, "time", "date", room, "floor") values (110,  '15:00', '2021-11-23', 05, 01);    
+
+
     -- CASE A: approved meeting AND approver_id <> booker_id AND session == 1hr
     insert into Joins (eid, "time", "date", room, "floor") values (21,  '09:00', '2021-11-19', 01, 01); 
     insert into Joins (eid, "time", "date", room, "floor") values (22,  '09:00', '2021-11-19', 01, 01); 

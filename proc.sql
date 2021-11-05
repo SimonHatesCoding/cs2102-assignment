@@ -522,7 +522,7 @@
         temp INT;
     BEGIN
         SELECT temperature INTO temp FROM HealthDeclarations HD 
-        WHERE HD.eid = in_eid AND HD.eid = D;
+        WHERE HD.eid = in_eid AND HD.date = D;
 
         IF temp IS NULL THEN
             RAISE EXCEPTION 'eid: % did not declare temperature on date: %', in_eid, D;
@@ -532,27 +532,22 @@
         END IF;
 
         -- find close contact
-        CREATE VIEW AffectedSessions AS
-        SELECT S.time, S.date, S.room, S.floor
-        FROM Sessions S
-        LEFT JOIN Joins J 
-        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
-        WHERE J.eid = in_eid AND S.date BETWEEN D - interval '3 days' AND D;           
-
-        CREATE VIEW CloseContacts AS
-        SELECT DISTINCT(J.eid)
-        FROM AffectedSessions S
-        LEFT JOIN Joins J
-        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
-
-        -- remove from D to D+7
+        WITH CloseContacts AS (
+            SELECT J2.eid
+            FROM Joins J1, Joins J2
+            WHERE J1.time = J2.time AND J1.date = J2.date AND J1.room = J2.room AND J1.floor = J2.floor
+                  AND J1.eid = in_eid AND J1.date BETWEEN D - interval '3 days' AND D AND J1.eid <> J2.eid 
+        ) 
         DELETE FROM Joins J
-        WHERE (J.date BETWEEN D AND D + interval '7 days') AND (J.date >= CURRENT_DATE) AND J.eid IN (SELECT * FROM CloseContacts);
+        WHERE (J.date BETWEEN D AND D + interval '7 days') AND (J.date >= CURRENT_DATE) 
+                AND J.eid IN (SELECT * FROM CloseContacts);
 
-        RETURN QUERY SELECT * FROM CloseContacts;
+        RETURN QUERY 
+        SELECT J2.eid
+        FROM Joins J1, Joins J2
+        WHERE J1.time = J2.time AND J1.date = J2.date AND J1.room = J2.room AND J1.floor = J2.floor
+                AND J1.eid = in_eid AND J1.date BETWEEN D - interval '3 days' AND D AND J1.eid <> J2.eid;
 
-        DROP VIEW AffectedSessions;
-        DROP VIEW CloseContacts;
     END;
     $$ LANGUAGE plpgsql;
 
@@ -697,7 +692,8 @@
         DELETE FROM Joins WHERE eid = NEW.eid AND "date" >= NEW.date;
 
         -- call contact tracing
-        CALL contact_tracing(NEW.eid, NEW.date);
+        PERFORM contact_tracing(NEW.eid, NEW.date);
+        RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
 
@@ -785,6 +781,8 @@
               S.time = NEW.time AND
               S.floor = NEW.floor AND
               S.room = NEW.room;
+        
+        RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
 
