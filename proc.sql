@@ -591,7 +591,7 @@
         SELECT "floor", room, "date", "time", 
         CASE 
             WHEN approver_id IS NOT NULL THEN 'Yes'  -- is approved
-            ELSE 'No (Pending)'                              -- waiting for approval
+            ELSE 'No (Pending)'                      -- waiting for approval
         END AS is_approved
         FROM Sessions
         WHERE "date" >= in_start_date AND booker_id = in_eid
