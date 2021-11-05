@@ -637,6 +637,7 @@
 -- TRIGGERS
 ------------------------------------------------------------------------
 -- Sessions
+  -- TR_Sessions_BeforeInsert
     CREATE OR REPLACE FUNCTION cannot_book()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -655,6 +656,7 @@
     FOR EACH ROW EXECUTE FUNCTION cannot_book();
 
 
+  -- TR_Sessions_AfterInsert
     CREATE OR REPLACE FUNCTION booker_join_meeting()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -669,6 +671,7 @@
     AFTER INSERT ON Sessions
     FOR EACH ROW EXECUTE FUNCTION booker_join_meeting();
 
+  -- TR_Sessions_BeforeUpdate
     CREATE OR REPLACE FUNCTION cannot_approve()
     RETURNS TRIGGER AS $$
     DECLARE
@@ -702,6 +705,7 @@
     FOR EACH ROW EXECUTE FUNCTION cannot_approve();
 
 -- HealthDeclarations
+  -- TR_HealthDeclarations_AfterInsert
     CREATE OR REPLACE FUNCTION check_fever()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -723,6 +727,7 @@
     END;
     $$ LANGUAGE plpgsql;
 
+  -- TR_HealthDeclarations_BeforeInsert
     DROP TRIGGER IF EXISTS TR_HealthDeclarations_AfterInsert On HealthDeclarations;
     CREATE TRIGGER TR_HealthDeclarations_AfterInsert
     AFTER INSERT OR UPDATE ON HealthDeclarations
@@ -744,6 +749,7 @@
     FOR EACH ROW EXECUTE FUNCTION validate_date();
 
 -- Joins
+  -- TR_Joins_BeforeInsert
     CREATE OR REPLACE FUNCTION cannot_join()
     RETURNS TRIGGER AS $$
     DECLARE
@@ -795,6 +801,7 @@
     BEFORE INSERT ON Joins
     FOR EACH ROW EXECUTE FUNCTION cannot_join();
 
+  -- TR_Joins_AfterDelete
     CREATE OR REPLACE FUNCTION booker_leave_meeting()
     RETURNS TRIGGER AS $$
     -- if booker leave a meeting, cancel the meeting
@@ -819,6 +826,7 @@
     FOR EACH ROW EXECUTE FUNCTION booker_leave_meeting();
 
 -- Updates
+  -- TR_Updates_AfterInsert
     CREATE OR REPLACE FUNCTION remove_exceeding_capacity()
     RETURNS TRIGGER AS $$
     BEGIN
