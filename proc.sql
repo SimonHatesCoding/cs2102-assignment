@@ -487,7 +487,7 @@
         IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF NOT check_same_dpmt(in_floor, in_room, in_date, start_hour, end_hour, in_eid) THEN RETURN;
         END IF;
@@ -513,7 +513,7 @@
         IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to reject the meeting', in_eid;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF NOT check_same_dpmt(in_floor, in_room, in_date, start_hour, end_hour, in_eid) THEN RETURN;
         END IF;
@@ -624,16 +624,19 @@
 
 -- view_manager_report
     CREATE OR REPLACE FUNCTION view_manager_report
-    (IN in_start_date DATE, IN in_eid INT, OUT out_floor INT, OUT out_room INT, OUT out_date DATE, OUT out_time TIME, OUT out_eid INT)
-    RETURNS SETOF RECORD AS $$
+    (IN in_start_date DATE, IN in_eid INT)
+    RETURNS TABLE("floor" INT, room INT, "date" DATE, "time" TIME, eid INT) AS $$
         --Petrick
+    BEGIN
+        RETURN QUERY
         SELECT S.floor, S.room, S.date, S.time, S.booker_id
         FROM Sessions S
-        WHERE in_eid in (SELECT eid FROM Managers)
-        AND S.date >= in_start_date
-        AND (SELECT did FROM Employees WHERE eid = in_eid) = (SELECT did FROM MeetingRooms R WHERE S.floor = R.floor AND S.room = R.room)
+        WHERE in_eid in (SELECT M.eid FROM Managers M)
+        AND S.date >= in_start_date AND S.approver_id IS NULL
+        AND (SELECT did FROM Employees E WHERE E.eid = in_eid) = (SELECT did FROM MeetingRooms R WHERE S.floor = R.floor AND S.room = R.room)
         ORDER BY S.date ASC, S.time ASC;
-    $$ LANGUAGE sql;
+    END;
+    $$ LANGUAGE plpgsql;
 
 ------------------------------------------------------------------------
 -- TRIGGERS
