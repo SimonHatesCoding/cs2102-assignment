@@ -92,7 +92,7 @@ CALL approve_meeting(10, 42, '2021-11-10', 14, 16, 401);
 
 Simon checks that he has a meeting in the future.
 
-		SELECT view_future_meeting('2021-11-10', 402);
+		SELECT * FROM view_future_meeting('2021-11-10', 402);
 
 
 
@@ -212,6 +212,23 @@ Petrick notifies the HR Managers, one of whom eventually approves meeting
 CALL approve_meeting(04, 01, '2021-11-12', 17, 18, 313);
 
 SELECT * From Joins WHERE floor = 4 AND room = 1 AND date = '2021-11-12';
+
+
+Teddy calls another meeting with his "Secret" Team.
+
+CALL book_room(10, 42, '2021-11-12', 14, 16, 401);
+
+CALL join_meeting(10, 42, '2021-11-12', 14, 16, 402); -- Simon
+CALL join_meeting(10, 42, '2021-11-12', 14, 16, 119); -- Manager
+CALL join_meeting(10, 42, '2021-11-12', 14, 16, 219); -- Manager
+
+CALL approve_meeting(10, 42, '2021-11-12', 14, 16, 401);
+
+SELECT * FROM view_future_meeting('2021-11-12', 401);
+SELECT * FROM view_future_meeting('2021-11-12', 402);
+SELECT * FROM view_future_meeting('2021-11-12', 119);
+SELECT * FROM view_future_meeting('2021-11-12', 219);
+
 
 Week 2
 
@@ -462,3 +479,5 @@ Tianle still wants to join and ask for forgiveness, but to no avail.
 
 CALL join_meeting(4, 1, '2021-11-17', 14, 15, 404);
 -- Resigned employees cannot join meeting
+
+SELECT * FROM non_compliance('2021-11-5', CURRENT_DATE);

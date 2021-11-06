@@ -524,7 +524,6 @@
 
     END;
     $$ LANGUAGE plpgsql;
--- check if it is alr approved
 
 ------------------------------------------------------------------------
 -- HEALTH (Readapt as necessary.)
