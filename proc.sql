@@ -175,7 +175,7 @@
     CREATE OR REPLACE FUNCTION is_valid_room(IN in_floor INT, IN in_room INT)
     RETURNS BOOLEAN AS $$
     BEGIN
-        IF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN 
+        IF (in_room, in_floor) NOT IN (SELECT room, floor FROM MeetingRooms) THEN 
             RAISE NOTICE 'The given floor: % and room: % is invalid', in_floor, in_room;
             RETURN FALSE;
         ELSE RETURN TRUE;
@@ -214,6 +214,38 @@
         LIMIT 1;
     $$ LANGUAGE sql;
 
+-- check_same_dpmt
+    CREATE OR REPLACE FUNCTION check_same_dpmt(IN in_floor INT, IN in_room INT, IN in_date DATE, IN start_hour INT, IN end_hour INT, IN in_eid INT)
+    RETURNS BOOLEAN AS $$
+    DECLARE
+        did_a INT;
+        did_b INT;
+        h INT;
+    BEGIN
+        FOR h in start_hour..end_hour-1 LOOP
+            SELECT did INTO did_b FROM Employees
+            WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
+            SELECT did INTO did_a FROM Employees WHERE eid = in_eid;
+            IF did_b <> did_a THEN RAISE NOTICE '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, did_a, in_floor, in_room, in_date, h, did_b;
+            RETURN FALSE;
+            END IF;
+        RETURN TRUE;
+        END LOOP;
+    END;
+    $$ LANGUAGE plpgsql;
+
+-- is_resigned
+    CREATE OR REPLACE FUNCTION is_resigned(IN in_eid INT)
+    RETURNS BOOLEAN AS $$
+    BEGIN
+        IF (SELECT resigned_date FROM Employees WHERE eid = in_eid) IS NOT NULL
+            THEN RAISE NOTICE '% is already resigned', in_eid;
+            RETURN TRUE;
+        END IF;
+        RETURN FALSE;
+    END;
+    $$ LANGUAGE plpgsql;
+
 ------------------------------------------------------------------------
 -- BASIC (Readapt as necessary.)
 ------------------------------------------------------------------------
@@ -247,18 +279,19 @@
 
 -- change_capacity
     CREATE OR REPLACE PROCEDURE change_capacity
-    (IN in_room INT, IN "in_floor" INT, IN in_capacity INT, IN in_date DATE, IN in_eid INT)
+    (IN in_room INT, IN in_floor INT, IN in_capacity INT, IN in_date DATE, IN in_eid INT)
     AS $$
     BEGIN
-        IF in_eid IN (SELECT eid FROM Managers) THEN
-            UPDATE Updates SET capacity = in_cap WHERE room = in_room AND "floor" = "in_floor";
-            UPDATE Updates SET "date" = in_date WHERE room = in_room AND "floor" = "in_floor";
-            UPDATE Updates SET eid = in_eid WHERE room = in_room AND "floor" = "in_floor";
-        END IF;
+        IF is_past(in_date, 0) THEN NULL;
+        ELSIF NOT in_eid IN (SELECT eid FROM Managers) THEN NULL;
+        ELSIF in_date IN (SELECT "date" FROM Updates WHERE room = in_room AND "floor" = "in_floor") THEN 
+            UPDATE Updates SET "date" = in_date, capacity = in_capacity 
+            WHERE room = in_room AND "floor" = "in_floor";
+        ELSE
+            INSERT INTO Updates VALUES(in_eid, in_date, in_floor, in_room, in_capacity);  
+        END IF; 
     END;
     $$ LANGUAGE plpgsql;
-    -- Cannot change capacity for the past dates
-    -- If another update appears on the same day for the same room, delete the previous updates
 
 -- add_employee
     CREATE OR REPLACE PROCEDURE add_employee
@@ -326,19 +359,17 @@
         IF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
         END IF;
-            -- SELECT a.floor INTO floor_num, a.room INTO room_num, r.did INTO department_id, 
-            --     check_capacity(in_room, in_floor, in_date) INTO capacity
-            -- FROM (SELECT "floor", room AS room FROM Updates -- All rooms that fulfill the capacity
-            -- WHERE in_capacity <= check_capacity(in_room, in_floor, in_date)) AS a 
-            -- LEFT JOIN Sessions s ON a.room = s.room AND a.floor = s.floor 
-            -- JOIN MeetingRooms r ON a.room = r.room, a.floor = r.floor
-            -- WHERE NOT any_session_exist(a.floor, a.room, in_date, in_start_hour, in_end_hour);
 
         RETURN QUERY 
         SELECT M.floor, M.room, M.did, check_capacity(M.room, M.floor, in_date)
         FROM MeetingRooms M
         WHERE in_capacity <= check_capacity(M.room, M.floor, in_date) AND
+<<<<<<< HEAD
               NOT any_session_exist(M.floor, M.room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour));
+=======
+              NOT any_session_exist(M.floor, M.room, in_date, hour_int_to_time(start_hour), 
+                hour_int_to_time(end_hour));
+>>>>>>> edb101d4452d5b509ecec5f94d46d6b28d6210f3
     END;
     $$ LANGUAGE plpgsql;
 
@@ -385,7 +416,7 @@
         FOR h IN start_hour..end_hour-1 LOOP
             DELETE FROM Sessions WHERE booker_id = in_eid AND floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
         END LOOP;
-    END
+    END;
     $$ LANGUAGE plpgsql;
 
 -- join_meeting
@@ -454,24 +485,18 @@
     DECLARE
     -- variables here
         h INT;
-        did_b INT;
-        did_a INT;
     BEGIN
         -- Simon
         -- Check if the meeting is alr approved
         IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF NOT check_same_dpmt(in_floor, in_room, in_date, start_hour, end_hour, in_eid) THEN RETURN;
         END IF;
 
         FOR h in start_hour..end_hour-1 LOOP
-            SELECT did INTO did_b FROM Employees
-            WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
-            SELECT did INTO did_a FROM Employees WHERE eid = in_eid;
-            IF did_b <> did_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, did_a, in_floor, in_room, in_date, h, did_b;
-            END IF;
             UPDATE Sessions SET approver_id = in_eid WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
         END LOOP;
 
@@ -492,22 +517,17 @@
         IF in_eid NOT IN (SELECT eid FROM Managers) THEN RAISE EXCEPTION '% is not authorized to reject the meeting', in_eid;
         ELSIF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
         ELSIF is_past(in_date, start_hour) THEN RETURN;
-        ELSIF NOT any_session_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF NOT all_sessions_exist(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
         ELSIF any_session_approved(in_floor, in_room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour)) THEN RETURN;
+        ELSIF NOT check_same_dpmt(in_floor, in_room, in_date, start_hour, end_hour, in_eid) THEN RETURN;
         END IF;
 
         FOR h in start_hour..end_hour-1 LOOP
-            SELECT did INTO did_b FROM Employees
-            WHERE eid = (SELECT booker_id FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h);
-            SELECT did INTO did_a FROM Employees WHERE eid = in_eid;
-            IF did_b <> did_a THEN RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', in_eid, did_a, in_floor, in_room, in_date, h, did_b;
-            END IF;
             DELETE FROM Sessions WHERE floor = in_floor AND room = in_room AND date = in_date AND date_part('hour', time) = h;
         END LOOP;
 
     END;
     $$ LANGUAGE plpgsql;
--- check if it is alr approved
 
 ------------------------------------------------------------------------
 -- HEALTH (Readapt as necessary.)
@@ -529,7 +549,7 @@
         temp INT;
     BEGIN
         SELECT temperature INTO temp FROM HealthDeclarations HD 
-        WHERE HD.eid = in_eid AND HD.eid = D;
+        WHERE HD.eid = in_eid AND HD.date = D;
 
         IF temp IS NULL THEN
             RAISE EXCEPTION 'eid: % did not declare temperature on date: %', in_eid, D;
@@ -539,27 +559,22 @@
         END IF;
 
         -- find close contact
-        CREATE VIEW AffectedSessions AS
-        SELECT S.time, S.date, S.room, S.floor
-        FROM Sessions S
-        LEFT JOIN Joins J 
-        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor
-        WHERE J.eid = in_eid AND S.date BETWEEN D - interval '3 days' AND D;           
-
-        CREATE VIEW CloseContacts AS
-        SELECT DISTINCT(J.eid)
-        FROM AffectedSessions S
-        LEFT JOIN Joins J
-        ON S.time = J.time AND S.date = J.date AND S.room = J.room AND S.floor = J.floor AND J.eid <> in_eid;
-
-        -- remove from D to D+7
+        WITH CloseContacts AS (
+            SELECT J2.eid
+            FROM Joins J1, Joins J2
+            WHERE J1.time = J2.time AND J1.date = J2.date AND J1.room = J2.room AND J1.floor = J2.floor
+                  AND J1.eid = in_eid AND J1.date BETWEEN D - interval '3 days' AND D AND J1.eid <> J2.eid 
+        ) 
         DELETE FROM Joins J
-        WHERE (J.date BETWEEN D AND D + interval '7 days') AND (J.date >= CURRENT_DATE) AND J.eid IN (SELECT * FROM CloseContacts);
+        WHERE (J.date BETWEEN D AND D + interval '7 days') AND (J.date >= CURRENT_DATE) 
+                AND J.eid IN (SELECT * FROM CloseContacts);
 
-        RETURN QUERY SELECT * FROM CloseContacts;
+        RETURN QUERY 
+        SELECT J2.eid
+        FROM Joins J1, Joins J2
+        WHERE J1.time = J2.time AND J1.date = J2.date AND J1.room = J2.room AND J1.floor = J2.floor
+                AND J1.eid = in_eid AND J1.date BETWEEN D - interval '3 days' AND D AND J1.eid <> J2.eid;
 
-        DROP VIEW AffectedSessions;
-        DROP VIEW CloseContacts;
     END;
     $$ LANGUAGE plpgsql;
 
@@ -612,25 +627,32 @@
 
 -- view_manager_report
     CREATE OR REPLACE FUNCTION view_manager_report
-    (IN in_start_date DATE, IN in_eid INT, OUT out_floor INT, OUT out_room INT, OUT out_date DATE, OUT out_time TIME, OUT out_eid INT)
-    RETURNS SETOF RECORD AS $$
+    (IN in_start_date DATE, IN in_eid INT)
+    RETURNS TABLE("floor" INT, room INT, "date" DATE, "time" TIME, eid INT) AS $$
         --Petrick
+    BEGIN
+        RETURN QUERY
         SELECT S.floor, S.room, S.date, S.time, S.booker_id
         FROM Sessions S
-        WHERE in_eid in (SELECT eid FROM Managers)
-        AND S.date >= in_start_date
-        AND (SELECT did FROM Employees WHERE eid = in_eid) = (SELECT did FROM MeetingRooms R WHERE S.floor = R.floor AND S.room = R.room)
+        WHERE in_eid in (SELECT M.eid FROM Managers M)
+        AND S.date >= in_start_date AND S.approver_id IS NULL
+        AND (SELECT did FROM Employees E WHERE E.eid = in_eid) = (SELECT did FROM MeetingRooms R WHERE S.floor = R.floor AND S.room = R.room)
         ORDER BY S.date ASC, S.time ASC;
-    $$ LANGUAGE sql;
+    END;
+    $$ LANGUAGE plpgsql;
 
 ------------------------------------------------------------------------
 -- TRIGGERS
 ------------------------------------------------------------------------
 -- Sessions
-    CREATE OR REPLACE FUNCTION fever_cannot_book()
+  -- TR_Sessions_BeforeInsert
+    CREATE OR REPLACE FUNCTION cannot_book()
     RETURNS TRIGGER AS $$
     BEGIN
         IF has_fever(NEW.booker_id) THEN RETURN NULL;
+        ELSIF is_resigned(NEW.booker_id) THEN RETURN NULL;
+        ELSIF NEW.booker_id NOT IN (SELECT eid FROM Bookers) THEN RAISE NOTICE 'Employee % is not authorized to make bookings', in_eid;
+        RETURN NULL;
         ELSE RETURN NEW;
         END IF;
     END;
@@ -639,9 +661,10 @@
     DROP TRIGGER IF EXISTS TR_Sessions_BeforeInsert ON Sessions;
     CREATE TRIGGER TR_Sessions_BeforeInsert
     BEFORE INSERT ON Sessions
-    FOR EACH ROW EXECUTE FUNCTION fever_cannot_book();
+    FOR EACH ROW EXECUTE FUNCTION cannot_book();
 
 
+  -- TR_Sessions_AfterInsert
     CREATE OR REPLACE FUNCTION booker_join_meeting()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -656,7 +679,41 @@
     AFTER INSERT ON Sessions
     FOR EACH ROW EXECUTE FUNCTION booker_join_meeting();
 
+  -- TR_Sessions_BeforeUpdate
+    CREATE OR REPLACE FUNCTION cannot_approve()
+    RETURNS TRIGGER AS $$
+    DECLARE
+        booker_did INT;
+        approver_did INT;
+    BEGIN
+        IF NEW.approver_id NOT IN (SELECT eid FROM Managers) THEN 
+            RAISE EXCEPTION '% is not authorized to approve the meeting', in_eid;
+            RETURN OLD;
+        ELSIF is_resigned(NEW.approver_id) THEN RETURN NULL;
+        END IF;
+
+        SELECT did INTO booker_did FROM Employees
+        WHERE eid = NEW.booker_id;
+        SELECT did INTO approver_did FROM Employees 
+        WHERE eid = NEW.approver_id;
+
+        IF booker_did <> approver_did THEN 
+            RAISE EXCEPTION '% is not in the same department (%) as the booker of %-% at % %h (%)', 
+                in_eid, did_a, in_floor, in_room, in_date, h, did_b;
+            RETURN OLD;
+        END IF;
+        
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS TR_Sessions_BeforeUpdate ON Sessions;
+    CREATE TRIGGER TR_Sessions_BeforeUpdate
+    BEFORE UPDATE ON Sessions
+    FOR EACH ROW EXECUTE FUNCTION cannot_approve();
+
 -- HealthDeclarations
+  -- TR_HealthDeclarations_AfterInsert
     CREATE OR REPLACE FUNCTION check_fever()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -673,10 +730,12 @@
         DELETE FROM Joins WHERE eid = NEW.eid AND "date" >= NEW.date;
 
         -- call contact tracing
-        CALL contact_tracing(NEW.eid, NEW.date);
+        PERFORM contact_tracing(NEW.eid, NEW.date);
+        RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
 
+  -- TR_HealthDeclarations_BeforeInsert
     DROP TRIGGER IF EXISTS TR_HealthDeclarations_AfterInsert On HealthDeclarations;
     CREATE TRIGGER TR_HealthDeclarations_AfterInsert
     AFTER INSERT OR UPDATE ON HealthDeclarations
@@ -698,7 +757,8 @@
     FOR EACH ROW EXECUTE FUNCTION validate_date();
 
 -- Joins
-    CREATE OR REPLACE FUNCTION capacity_and_fever_check()
+  -- TR_Joins_BeforeInsert
+    CREATE OR REPLACE FUNCTION cannot_join()
     RETURNS TRIGGER AS $$
     DECLARE
         capacity INT;
@@ -706,6 +766,7 @@
         approver_id INT;
     BEGIN
         IF has_fever(NEW.eid) THEN RETURN NULL;
+        ELSIF is_resigned(NEW.eid) THEN RETURN NULL;
         END IF;
 
         -- find out the capacity of the room for that day
@@ -746,9 +807,10 @@
     DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert ON Joins;
     CREATE TRIGGER TR_Joins_BeforeInsert
     BEFORE INSERT ON Joins
-    FOR EACH ROW EXECUTE FUNCTION capacity_and_fever_check();
+    FOR EACH ROW EXECUTE FUNCTION cannot_join();
 
-    CREATE OR REPLACE FUNCTION booker_left()
+  -- TR_Joins_AfterDelete
+    CREATE OR REPLACE FUNCTION booker_leave_meeting()
     RETURNS TRIGGER AS $$
     -- if booker leave a meeting, cancel the meeting
     BEGIN
@@ -761,15 +823,18 @@
               S.time = NEW.time AND
               S.floor = NEW.floor AND
               S.room = NEW.room;
+        
+        RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
 
     DROP TRIGGER IF EXISTS TR_Joins_AfterDelete ON Joins;
     CREATE TRIGGER TR_Joins_AfterDelete
     AFTER DELETE ON Joins
-    FOR EACH ROW EXECUTE FUNCTION booker_left();
+    FOR EACH ROW EXECUTE FUNCTION booker_leave_meeting();
 
 -- Updates
+  -- TR_Updates_AfterInsert
     CREATE OR REPLACE FUNCTION remove_exceeding_capacity()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -793,3 +858,16 @@
     CREATE TRIGGER TR_Updates_AfterInsert
     AFTER INSERT ON Updates
     FOR EACH ROW EXECUTE FUNCTION remove_exceeding_capacity();
+
+    CREATE OR REPLACE FUNCTION cannot_update()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        IF is_resigned(NEW.approver_id) THEN RETURN NULL;
+        END IF;
+    END;
+    $$ LANGUAGE plpgsql;
+    
+    DROP TRIGGER IF EXISTS TR_Updates_BeforeUpdate ON Updates;
+    CREATE TRIGGER TR_Updates_BeforeUpdate
+    BEFORE UPDATE ON Updates
+    FOR EACH ROW EXECUTE FUNCTION cannot_update();

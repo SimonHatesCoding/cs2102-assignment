@@ -66,7 +66,7 @@ CREATE TABLE HealthDeclarations (
     -- Teddy 
     eid         INT     REFERENCES Employees(eid),
     "date"      DATE,
-    temperature float   NOT NULL,
+    temperature float   NOT NULL CHECK (temperature BETWEEN 34 AND 43),
     PRIMARY KEY ("date", eid)
 );
 

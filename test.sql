@@ -270,57 +270,6 @@
 -- END;
 -- $$ LANGUAGE plpgsql;
 
-
--- CREATE OR REPLACE PROCEDURE add_department (IN did INT, IN dname VARCHAR(50)) 
--- AS $$
---     INSERT INTO Departments (did, dname) VALUES (did, dname);
--- $$ LANGUAGE sql;
-
--- CALL add_department(6, 'Safety');
-
-
--- CREATE OR REPLACE PROCEDURE remove_department(IN in_did INT， IN in_transfer_did INT)
---  -- CANNOT DELETE 1,2,4,5,9; Operations will be transffered into HR; R&D is transffered into IT. 
---  -- The rest of departments cannot be deleted. Raise exception if attempts are made.
--- AS $$
---     IF in_did IN (6,7,8) THEN
---         DELETE FROM Employees WHERE in_did = .did;
---     ELSIF in_did = 3 THEN
---         UPDATE Employees SET did = 4 WHERE did = 3;
---     ELSIF in_did = 10 THEN
---         UPDATE Employees SET did = 5 WHERE did = 10;
---     END IF;
---     DELETE FROM Departments WHERE did = in_did;
--- $$ LANGUAGE plpgsql;
-
--- CREATE OR REPLACE FUNCTION core_departments() RETURNS TRIGGER AS $$
--- BEGIN
---     RAISE EXCEPTION 'Some users are trying to delete or update the core departments';
---     RETURN NULL;
--- END;
--- $$ LANGUAGE sql;
-
--- CREATE OR REPLACE TRIGGER check_core
--- BEFORE DELETE OR UPDATE ON Departments
--- FOR EACH ROW WHERE OLD.did IN (1,2,4,5,9) EXECUTE FUNCTION core_departments();
-
-
--- CREATE OR REPLACE PROCEDURE add_room
---  (IN room INT, IN "floor" INT, IN rname VARCHAR(50), IN did INT)
--- AS $$
---     -- Tianle
---     INSERT INTO MeetingRooms VALUES (room, "floor", rname, did);
--- $$ LANGUAGE sql;
-
--- CREATE OR REPLACE PROCEDURE change_capacity
--- (IN room INT, IN "floor" INT, IN capacity INT, IN DATE )
--- AS $$
---     UPDATE Updates SET cap = capacity wHERE room = OLD.room AND "floor" = OLD.floor;
---     UPDATE Updates SET "date" = OLD."date" wHERE room = OLD.room AND "floor" = OLD.floor;
---     -- Tianle
--- $$ LANGUAGE sql;
--- -- Check whether the manager changes the cap
-
 -- SELECT is_valid_hour(1,24);
 -- SELECT is_valid_hour(10,6);
 
@@ -362,80 +311,58 @@
 -- SELECT * FROM non_compliance('2021-09-10'::DATE, '2021-09-20'::DATE);
 -- SELECT * FROM non_compliance('2021-09-10', '2021-09-20');
 
+-- -- CHECK if Employee 34 is resigned properly
+-- SELECT * FROM Employees WHERE eid = 34;
+-- SELECT * FROM Joins WHERE eid = 34;
+-- CALL remove_employee(34, '2021-10-18');
+-- SELECT * FROM Employees WHERE eid = 34;
+-- SELECT * FROM Joins WHERE eid = 34;
 
--- CREATE OR REPLACE PROCEDURE add_department (IN did INT, IN dname VARCHAR(50)) 
--- AS $$
---     INSERT INTO Departments (did, dname) VALUES (did, dname);
--- $$ LANGUAGE sql;
+-- -- Check if Senior 2 is resigned properly
+-- SELECT * FROM Employees WHERE eid = 2;
+-- SELECT * FROM Bookers WHERE eid = 2;
+-- SELECT * FROM Sessions WHERE booker_id = 2;
+-- SELECT * FROM Joins WHERE eid = 2;
+-- CALL remove_employee(2, '2021-10-18');
+-- SELECT * FROM Employees WHERE eid = 2;
+-- SELECT * FROM Bookers WHERE eid = 2;
+-- SELECT * FROM Sessions WHERE booker_id = 2;
+-- SELECT * FROM Joins WHERE eid = 2;
 
--- CALL add_department(6, 'Safety');
+-- -- Normal calls to view
+-- SELECT * FROM view_booking_report('2021-10-19', 104); 
+-- SELECT * FROM view_future_meeting('2021-10-19', 94); 
+-- SELECT * FROM view_manager_report('2021-10-20', 313);
+-- SELECT * FROM view_manager_report('2021-10-19', 323);
 
+--Check if new departments can be added without violating PK
+CALL add_department(1, 'Marketing');
+CALL add_department(1, 'Finance');
+CALL add_department(3, 'Finance');
+CALL add_department(11, 'Intern');
+CALL add_department(12, 'Boss');
 
--- CREATE OR REPLACE PROCEDURE remove_department(IN in_did INT， IN in_transfer_did INT)
---  -- CANNOT DELETE 1,2,4,5,9; Operations will be transffered into HR; R&D is transffered into IT. 
---  -- The rest of departments cannot be deleted. Raise exception if attempts are made.
--- AS $$
---     IF in_did IN (6,7,8) THEN
---         DELETE FROM Employees WHERE in_did = .did;
---     ELSIF in_did = 3 THEN
---         UPDATE Employees SET did = 4 WHERE did = 3;
---     ELSIF in_did = 10 THEN
---         UPDATE Employees SET did = 5 WHERE did = 10;
---     END IF;
---     DELETE FROM Departments WHERE did = in_did;
--- $$ LANGUAGE plpgsql;
+CALL add_room(01, 11, 'Database Meeting Room', 11);
+CALL add_room(02, 11, 'Gryffindor Meeting Room', 11);
+CALL add_room(03, 11, 'Hufflepuff Meeting Room', 11);
+CALL add_room(04, 11, 'Ravenclaw Meeting Room', 11);
+CALL add_room(05, 11, 'Slytherin Meeting Room', 11);
+CALL add_room(01, 12, 'Database Meeting Room', 12);
+CALL add_room(02, 12, 'Gryffindor Meeting Room', 12);
+CALL add_room(03, 12, 'Hufflepuff Meeting Room', 12);
+CALL add_room(04, 12, 'Ravenclaw Meeting Room', 12);
+CALL add_room(05, 12, 'Slytherin Meeting Room', 12);
 
--- CREATE OR REPLACE FUNCTION core_departments() RETURNS TRIGGER AS $$
--- BEGIN
---     RAISE EXCEPTION 'Some users are trying to delete or update the core departments';
---     RETURN NULL;
--- END;
--- $$ LANGUAGE sql;
+CALL remove_department(11, 12);
+DELETE FROM MeetingRooms WHERE room = 01 AND "floor" = 11;
+DELETE FROM MeetingRooms WHERE room = 02 AND "floor" = 11;
+DELETE FROM MeetingRooms WHERE room = 03 AND "floor" = 11;
+DELETE FROM MeetingRooms WHERE room = 04 AND "floor" = 11;
+DELETE FROM MeetingRooms WHERE room = 05 AND "floor" = 11;
 
--- CREATE OR REPLACE TRIGGER check_core
--- BEFORE DELETE OR UPDATE ON Departments
--- FOR EACH ROW WHERE OLD.did IN (1,2,4,5,9) EXECUTE FUNCTION core_departments();
+CALL change_capacity(01,01,3,'2021-11-06',20);
+CALL change_capacity(02,01,3,'2021-11-06',01); -- Not Manager
+CALL change_capacity(01,01,3,'2020-10-05',20); -- In the past
+CALL change_capacity(02,01,3,'2021-11-06',120); -- Wrong did
 
-
--- CREATE OR REPLACE PROCEDURE add_room
---  (IN room INT, IN "floor" INT, IN rname VARCHAR(50), IN did INT)
--- AS $$
---     -- Tianle
---     INSERT INTO MeetingRooms VALUES (room, "floor", rname, did);
--- $$ LANGUAGE sql;
-
--- CREATE OR REPLACE PROCEDURE change_capacity
--- (IN room INT, IN "floor" INT, IN capacity INT, IN DATE )
--- AS $$
---     UPDATE Updates SET cap = capacity wHERE room = OLD.room AND "floor" = OLD.floor;
---     UPDATE Updates SET "date" = OLD."date" wHERE room = OLD.room AND "floor" = OLD.floor;
---     -- Tianle
--- $$ LANGUAGE sql;
--- -- Check whether the manager changes the cap
-
--- CHECK if Employee 34 is resigned properly
-SELECT * FROM Employees WHERE eid = 34;
-SELECT * FROM Joins WHERE eid = 34;
-CALL remove_employee(34, '2021-10-18');
-SELECT * FROM Employees WHERE eid = 34;
-SELECT * FROM Joins WHERE eid = 34;
-
--- Check if Senior 2 is resigned properly
-SELECT * FROM Employees WHERE eid = 2;
-SELECT * FROM Bookers WHERE eid = 2;
-SELECT * FROM Sessions WHERE booker_id = 2;
-SELECT * FROM Joins WHERE eid = 2;
-CALL remove_employee(2, '2021-10-18');
-SELECT * FROM Employees WHERE eid = 2;
-SELECT * FROM Bookers WHERE eid = 2;
-SELECT * FROM Sessions WHERE booker_id = 2;
-SELECT * FROM Joins WHERE eid = 2;
-
--- Normal calls to view
-SELECT * FROM view_booking_report('2021-10-19', 104); 
-SELECT * FROM view_future_meeting('2021-10-19', 94); 
-SELECT * FROM view_manager_report('2021-10-20', 313);
-SELECT * FROM view_manager_report('2021-10-19', 323);
-
-
-
+SELECT search_room(3, '2021-11-19', 9, 10);
