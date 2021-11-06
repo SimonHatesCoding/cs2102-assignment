@@ -175,7 +175,7 @@
     CREATE OR REPLACE FUNCTION is_valid_room(IN in_floor INT, IN in_room INT)
     RETURNS BOOLEAN AS $$
     BEGIN
-        IF (in_floor, in_room) NOT IN (SELECT room, floor FROM MeetingRooms) THEN 
+        IF (in_room, in_floor) NOT IN (SELECT room, floor FROM MeetingRooms) THEN 
             RAISE NOTICE 'The given floor: % and room: % is invalid', in_floor, in_room;
             RETURN FALSE;
         ELSE RETURN TRUE;
