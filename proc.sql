@@ -323,8 +323,8 @@
     (IN in_capacity INT, IN in_date DATE, IN start_hour INT, IN end_hour INT)
     RETURNS TABLE(floor_num INT, room_num INT, department_id INT, capacity INT) AS $$
     BEGIN
-        IF NOT is_valid_hour(in_start_hour, in_end_hour) THEN RETURN;
-        ELSIF is_past(in_date, in_start_hour) THEN RETURN;
+        IF NOT is_valid_hour(start_hour, end_hour) THEN RETURN;
+        ELSIF is_past(in_date, start_hour) THEN RETURN;
         END IF;
             -- SELECT a.floor INTO floor_num, a.room INTO room_num, r.did INTO department_id, 
             --     check_capacity(in_room, in_floor, in_date) INTO capacity
@@ -338,7 +338,7 @@
         SELECT M.floor, M.room, M.did, check_capacity(M.room, M.floor, in_date)
         FROM MeetingRooms M
         WHERE in_capacity <= check_capacity(M.room, M.floor, in_date) AND
-              NOT any_session_exist(M.floor, M.room, in_date, start_hour, end_hour);
+              NOT any_session_exist(M.floor, M.room, in_date, hour_int_to_time(start_hour), hour_int_to_time(end_hour));
     END;
     $$ LANGUAGE plpgsql;
 

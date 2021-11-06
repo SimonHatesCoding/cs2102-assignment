@@ -957,7 +957,7 @@ INSERT INTO Managers
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('14:00', '2021-11-18', 03, 03, 102, 112);  -- D+9   102 books room and ALREADY APPROVED; not cancelled since > D+7. 
 
 
-    -- CASE B (10): approved meeting AND approver_id == booker_id AND session == 1hr
+    -- CASE B (5): approved meeting AND approver_id == booker_id AND session == 1hr
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('09:00', '2021-11-21', 01, 02, 111, 111);
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('10:00', '2021-11-20', 02, 04, 313, 313);
     insert into Sessions ("time", "date", room, "floor", booker_id, approver_id) values ('11:00', '2021-11-20', 03, 06, 215, 215);
